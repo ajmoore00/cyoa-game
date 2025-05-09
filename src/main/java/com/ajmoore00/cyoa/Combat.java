@@ -1,16 +1,16 @@
 package com.ajmoore00.cyoa;
 import java.util.Scanner;
 
-// Class for handling combat between player and enemy
+// Handles console combat between player and enemy
 public class Combat {
-    // Method for running a fight between player and enemy
+    // Run a fight between player and enemy (console only)
     public static boolean handleCombat(Player player, Enemy enemy) {
         if (Adventure.IS_WEB) {
             throw new IllegalStateException("Combat.handleCombat should not be called in web mode!");
         }
         Scanner scanner = new Scanner(System.in);
         System.out.println("Combat started! " + enemy.getName() + " has " + enemy.getHealth() + " HP.");
-        // While loop for the fight
+        // Fight until someone is defeated or you run
         while (!enemy.isDefeated() && player.getHealth() > 0) {
             System.out.println("\nYour health: " + player.getHealth() + "/" + player.getMaxHealth());
             System.out.println(enemy.getName() + " health: " + enemy.getHealth());
@@ -19,7 +19,7 @@ public class Combat {
             System.out.println("2. Use item from backpack");
             System.out.println("3. Run");
             int choice = -1;
-            // While loop to get a valid action
+            // Get a valid action from the player
             while (choice < 1 || choice > 3) {
                 System.out.print("> ");
                 try {

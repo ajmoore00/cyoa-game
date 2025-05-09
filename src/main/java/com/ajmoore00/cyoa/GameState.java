@@ -1,12 +1,12 @@
 package com.ajmoore00.cyoa;
 
-// Class for tracking the current scene, last choice, and ending
+// Tracks the current scene, last choice, and ending
 public class GameState {
     private String currentScene;
     private String lastChoice;
     private Ending ending;
     
-    // Enum for possible endings
+    // All possible endings
     public enum Ending {
         ESCAPE,
         DEATH,
@@ -14,9 +14,9 @@ public class GameState {
         STAY
     }
     
-    // Constructor for game state
+    // Start at Intro scene for web
     public GameState() {
-        currentScene = "Intro"; // Start at Intro scene for web
+        currentScene = "Intro";
         lastChoice = "";
         ending = null;
     }

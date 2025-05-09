@@ -1,3 +1,24 @@
+function setTheme(sceneKey) {
+  // Remove all theme classes
+  document.body.className = '';
+  // Map scene keys to themes
+  if (["CryoWake", "Storage", "Bridge", "Workshop", "Medbay", "SpareParts"].includes(sceneKey)) {
+    document.body.classList.add('theme-ship');
+  } else if (["CrashSite", "Tracks"].includes(sceneKey)) {
+    document.body.classList.add('theme-outside');
+  } else if (["ShuttleBay", "ShuttleBayFixed"].includes(sceneKey)) {
+    document.body.classList.add('theme-shuttle');
+  } else if (["LargeCreatureEncounter", "PostCombatLarge"].includes(sceneKey)) {
+    document.body.classList.add('theme-beast');
+  } else if (["MirageWalk", "MirageRest", "MirageRestScene"].includes(sceneKey)) {
+    document.body.classList.add('theme-mirage');
+  } else if (["AlienChamber", "AlienTalk"].includes(sceneKey)) {
+    document.body.classList.add('theme-alien');
+  } else {
+    document.body.classList.add('theme-ship');
+  }
+}
+
 async function startGame() {
   await fetch('/start', { method: 'POST' });
   loadScene();
@@ -6,6 +27,7 @@ async function startGame() {
 async function loadScene() {
   const res = await fetch('/scene');
   const data = await res.json();
+  setTheme(data.scene); // <-- Add this line
   const sceneDiv = document.getElementById('scene');
   const choicesDiv = document.getElementById('choices');
   sceneDiv.innerText = data.description;
@@ -17,8 +39,7 @@ async function loadScene() {
   if (data.lastMessage) {
     const msg = document.createElement('div');
     msg.innerText = data.lastMessage;
-    msg.style.margin = "1em 0";
-    msg.style.color = "#9cf";
+    msg.className = "feedback-message";
     choicesDiv.appendChild(msg);
   }
 

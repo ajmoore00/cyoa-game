@@ -1,0 +1,135 @@
+/* Base styles */
+body {
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  background: #181c22;
+  color: #e0e6ef;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  transition: background 0.7s, color 0.7s;
+}
+
+#game {
+  max-width: 700px;
+  margin: 2em auto;
+  padding: 2em 2.5em;
+  background: rgba(30, 34, 44, 0.97);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  transition: background 0.7s;
+}
+
+h1 {
+  text-align: center;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 1.5em;
+  color: #9cf;
+  text-shadow: 0 2px 8px #222;
+}
+
+#scene {
+  font-size: 1.18em;
+  margin-bottom: 1.2em;
+  line-height: 1.6;
+  min-height: 80px;
+  letter-spacing: 0.02em;
+}
+
+#choices {
+  margin-bottom: 1.5em;
+}
+
+button {
+  display: block;
+  width: 100%;
+  margin: 0.5em 0;
+  padding: 0.7em 1.2em;
+  background: #232b3a;
+  color: #e0e6ef;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+}
+button:hover, button:focus {
+  background: #3a4a6b;
+  color: #fff;
+  outline: none;
+}
+
+#ending {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #ffb347;
+  margin: 1.5em 0 0.5em 0;
+  text-align: center;
+  text-shadow: 0 2px 8px #222;
+}
+
+#backpack {
+  margin-top: 1.5em;
+  padding: 1em;
+  background: rgba(25, 28, 38, 0.93);
+  border-radius: 8px;
+  font-size: 1em;
+  color: #b9c6e1;
+  min-height: 40px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+
+#backpack b {
+  color: #9cf;
+}
+
+.feedback-message {
+  margin: 1em 0;
+  color: #9cf;
+  font-weight: 500;
+  background: rgba(40, 60, 120, 0.13);
+  padding: 0.5em 1em;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* Theming for different scenes */
+body.theme-ship {
+  background: linear-gradient(120deg, #181c22 60%, #232b3a 100%);
+}
+body.theme-outside {
+  background: linear-gradient(120deg, #e6e6e6 0%, #bfc9d1 100%);
+  color: #222;
+}
+body.theme-shuttle {
+  background: linear-gradient(120deg, #2e2e2e 60%, #5a5a5a 100%);
+}
+body.theme-beast {
+  background: linear-gradient(120deg, #2a2a2a 60%, #5a5a5a 100%);
+  background-image: repeating-linear-gradient(135deg, #fff2, #fff2 2px, transparent 2px, transparent 20px);
+}
+body.theme-mirage {
+  background: linear-gradient(120deg, #e0e6ef 0%, #f7f7fa 100%);
+  color: #2a2a2a;
+}
+body.theme-alien {
+  background: linear-gradient(120deg, #2e2e4e 0%, #6a6a9a 100%);
+  color: #e0e6ef;
+}
+.theme-outside #game, .theme-mirage #game {
+  background: rgba(255,255,255,0.92);
+  color: #232b3a;
+}
+.theme-shuttle #game {
+  background: rgba(40, 40, 40, 0.97);
+}
+.theme-beast #game {
+  background: rgba(30, 34, 44, 0.97);
+  border: 2px solid #c44;
+}
+.theme-alien #game {
+  background: rgba(50, 50, 90, 0.97);
+  border: 2px solid #9cf;
+}

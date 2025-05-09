@@ -1,10 +1,5 @@
 package com.ajmoore00.cyoa;
 
-/* I made this class early on, but its not used,
- * because I opted for a different approach,
- * but kept it in case for the future.
- */
-
 import java.util.Random;
 
 public class RandomEvent {
@@ -20,6 +15,7 @@ public class RandomEvent {
     public String getEventType() { return eventType; }
     public String getDescription() { return description; }
 
+    // Generate a random event (snack, drink, med-stim, or critter)
     public static RandomEvent generateEvent() {
         int chance = random.nextInt(4);
         switch(chance) {

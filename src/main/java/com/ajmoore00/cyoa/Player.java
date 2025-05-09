@@ -4,16 +4,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-// Class for the player (health, inventory, effects, etc)
+// Player class: handles health, inventory, effects, and all that jazz
 public class Player {
     private String name;
     private int health;
     private int maxHealth;
     private Weapon equippedWeapon;
-    private ArrayList<Item> inventory; // Inventory is an ArrayList
+    private ArrayList<Item> inventory;
     private Map<String, Effect> activeEffects;
 
-    // Constructor for player, sets up defaults
+    // Player starts with default stats and empty inventory
     public Player() {
         this.health = 100;
         this.maxHealth = 100;
@@ -21,7 +21,7 @@ public class Player {
         this.activeEffects = new HashMap<>();
     }
 
-    // Inner class for status effects (like sick)
+    // Inner class for status effects (like being sick)
     private class Effect {
         int value;
         int duration;
@@ -32,13 +32,13 @@ public class Player {
         }
     }
 
-    // Method to add a status effect
+    // Add a status effect (like "SICK")
     public void addEffect(String effectType, int value, int duration) {
         activeEffects.put(effectType, new Effect(value, duration));
         if (!Adventure.IS_WEB) System.out.println("Applied " + effectType + " effect for " + duration + " turns");
     }
 
-    // Method to update all effects (remove if done)
+    // Update all effects, remove them if they're done
     public void updateEffects() {
         activeEffects.entrySet().removeIf(entry -> {
             Effect effect = entry.getValue();
@@ -62,7 +62,7 @@ public class Player {
         return effect != null ? effect.value : 0;
     }
 
-    // Method for attacking (uses weapon if you have one)
+    // Attack with weapon if you have one, otherwise punch
     public int attack() {
         if (equippedWeapon != null) {
             return equippedWeapon.getDamage();
@@ -79,7 +79,7 @@ public class Player {
         return "";
     }
 
-    // Show backpack and let player use an item
+    // Show backpack and let player use or equip an item (console only)
     public void showBackpack(Scanner scanner) {
         if (inventory.isEmpty()) {
             if (!Adventure.IS_WEB) System.out.println("Your backpack is empty.");
@@ -107,7 +107,7 @@ public class Player {
             if (!Adventure.IS_WEB) System.out.println(result);
             inventory.remove(item);
         } else if (item instanceof Weapon) {
-            setEquippedWeapon((Weapon) item); // Always allow equipping any weapon
+            setEquippedWeapon((Weapon) item); // Equip whatever weapon you pick
             if (!Adventure.IS_WEB) System.out.println("You equipped the " + item.getName() + ".");
         } else {
             if (!Adventure.IS_WEB) System.out.println("You can't use that item right now.");
@@ -127,12 +127,15 @@ public class Player {
     public void removeItem(Item item) { inventory.remove(item); }
     public ArrayList<Item> getInventory() { return inventory; }
 
+    // Equip a weapon by index (console only)
     public void equipWeapon(int index) {
         Item item = inventory.get(index);
         if (item instanceof Weapon) {
             setEquippedWeapon((Weapon) item);
         }
     }
+
+    // Get the index of the equipped weapon in your backpack
     public int getEquippedWeaponIndex() {
         if (equippedWeapon == null) return -1;
         return inventory.indexOf(equippedWeapon);

@@ -1,19 +1,19 @@
 package com.ajmoore00.cyoa;
 
-// Class for consumable items (med-stim, snack, etc)
+// Consumable items: med-stim, snack, spoiled drink, etc.
 public class Consumable extends Item {
     private ConsumableType type;
     private int value;
     private int duration;
 
-    // Enum for different types of consumables
+    // Types of consumables
     public enum ConsumableType {
         MED_STIM,
         MYSTERY_SNACK,
         SPOILED_DRINK
     }
 
-    // Constructor for consumable
+    // Make a new consumable
     public Consumable(String name, String description, ConsumableType type, int value, int duration) {
         super(name, description);
         this.type = type;
@@ -21,7 +21,7 @@ public class Consumable extends Item {
         this.duration = duration;
     }
 
-    // Method for using the consumable
+    // What happens when you use this item
     public String use(Player player) {
         switch(type) {
             case MED_STIM:
@@ -38,7 +38,7 @@ public class Consumable extends Item {
         }
     }
 
-    // Getters for consumable properties
+    // Getters for consumable stuff
     public int getDuration() { return duration; }
     public int getValue() { return value; }
     public ConsumableType getConsumableType() { return type; }
