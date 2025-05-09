@@ -1,5 +1,6 @@
 package com.ajmoore00.cyoa;
 import java.util.*;
+import com.google.gson.Gson;
 
 public class Adventure {
     private Player player;
@@ -485,6 +486,32 @@ public class Adventure {
                 }
                 break;
         }
+    }
+
+    // Returns the current scene and choices as JSON for the frontend
+    public String getCurrentSceneAsJson() {
+        Scene scene = scenesMap.get(gameState.getCurrentScene());
+        Map<String, Object> data = new HashMap<>();
+        data.put("scene", gameState.getCurrentScene());
+        data.put("description", scene != null ? scene.getDescription() : "Scene not found!");
+        data.put("choices", scene != null ? scene.getChoices().keySet() : new ArrayList<>());
+        data.put("ending", gameState.getEnding());
+        data.put("playerHealth", player.getHealth());
+        data.put("playerMaxHealth", player.getMaxHealth());
+        data.put("inventory", player.getInventory());
+        return new Gson().toJson(data);
+    }
+
+    // Processes a choice from the frontend
+    public void makeChoice(String choiceText) {
+        Scene scene = scenesMap.get(gameState.getCurrentScene());
+        if (scene == null) return;
+        // Find the next scene key for the given choice text
+        String nextScene = scene.getChoices().get(choiceText);
+        if (nextScene != null) {
+            gameState.setCurrentScene(nextScene);
+        }
+        // You may want to add more logic here to handle inventory, combat, endings, etc.
     }
 
     // this is just the main thing to start the game

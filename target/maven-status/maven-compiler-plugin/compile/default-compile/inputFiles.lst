@@ -1,0 +1,12 @@
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Enemy.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/SceneFactory.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/RandomEvent.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Combat.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Player.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/WebServer.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Adventure.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Consumable.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Scene.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Item.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/GameState.java
+/home/austin/Nextcloud/VSCode/Java/cyoa-game/src/main/java/com/ajmoore00/cyoa/Weapon.java

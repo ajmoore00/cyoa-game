@@ -16,7 +16,7 @@ public class GameState {
     
     // Constructor for game state
     public GameState() {
-        currentScene = "Start";
+        currentScene = "CryoWake"; // <-- change from "Start" to "CryoWake"
         lastChoice = "";
         ending = null;
     }
