@@ -1,4 +1,6 @@
 com/ajmoore00/cyoa/Player$Effect.class
+com/ajmoore00/cyoa/Adventure$3.class
+com/ajmoore00/cyoa/Adventure$2.class
 com/ajmoore00/cyoa/Consumable.class
 com/ajmoore00/cyoa/Weapon.class
 com/ajmoore00/cyoa/Adventure.class
@@ -12,5 +14,7 @@ com/ajmoore00/cyoa/Player.class
 com/ajmoore00/cyoa/GameState$Ending.class
 com/ajmoore00/cyoa/Consumable$ConsumableType.class
 com/ajmoore00/cyoa/Adventure$1.class
+com/ajmoore00/cyoa/Adventure$4.class
 com/ajmoore00/cyoa/RandomEvent.class
 com/ajmoore00/cyoa/SceneFactory.class
+com/ajmoore00/cyoa/Adventure$5.class

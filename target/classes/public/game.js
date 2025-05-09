@@ -44,22 +44,6 @@ async function loadScene() {
     // Use item buttons
     if (data.inventory && data.inventory.length > 0) {
       data.inventory.forEach((item, idx) => {
-        if (item.type !== "Weapon") {
-          const btn = document.createElement('button');
-          btn.innerText = `Use ${item.name}`;
-          btn.onclick = async () => {
-            await fetch('/combat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `action=useItem&itemIndex=${idx}`
-            });
-            loadScene();
-          };
-          choicesDiv.appendChild(btn);
-        }
-      });
-
-      data.inventory.forEach((item, idx) => {
         if (item.type === "Consumable") {
           const btn = document.createElement('button');
           btn.innerText = `Use ${item.name}`;
@@ -67,7 +51,7 @@ async function loadScene() {
             await fetch('/combat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `action=useItem&itemIndex=${idx}`
+              body: `action=useItem&id=${encodeURIComponent(item.id)}`
             });
             loadScene();
           };
@@ -175,7 +159,7 @@ async function showBackpack() {
     invDiv.innerHTML += "Your backpack is empty.<br>";
   } else {
     data.inventory.forEach((item, idx) => {
-      if (item.name === data.equippedWeapon) {
+      if (idx === data.equippedWeaponIndex) {
         invDiv.innerHTML += `<b>${item.name} (equipped)</b> - ${item.description}<br>`;
       } else if (item.type === "Weapon") {
         // Show equip button for weapons
@@ -185,31 +169,34 @@ async function showBackpack() {
           await fetch('/equip-weapon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'index=' + idx
+            body: 'id=' + encodeURIComponent(item.id)
           });
-          showBackpack(); // Reload backpack to show feedback immediately
+          showBackpack();
         };
         invDiv.appendChild(btn);
         invDiv.appendChild(document.createTextNode(` - ${item.description}`));
         invDiv.appendChild(document.createElement('br'));
-      } else if (item.type === "Consumable") {
-        // Show use button for consumables
+      } else if (item.type === "Consumable" || item.name === "Device") {
+        // Show use button for consumables and device
         const btn = document.createElement('button');
-        btn.innerText = `Use ${item.name}`;
+        btn.innerText = item.name === "Device" ? `Use Device` : `Use ${item.name}`;
         btn.onclick = async () => {
           await fetch('/use-item', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'index=' + idx
+            body: 'id=' + encodeURIComponent(item.id)
           });
-          showBackpack(); // Reload backpack to show feedback immediately
+          showBackpack();
         };
         invDiv.appendChild(btn);
         invDiv.appendChild(document.createTextNode(` - ${item.description}`));
         invDiv.appendChild(document.createElement('br'));
+      } else if (item.name === "Shuttle Parts") {
+        invDiv.innerHTML += `${item.name} - ${item.description}<br>`;
       }
     });
   }
+
   // Add a back button
   const backBtn = document.createElement('button');
   backBtn.innerText = "Back";

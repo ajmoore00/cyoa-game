@@ -33,8 +33,9 @@ public class Consumable extends Item {
             case SPOILED_DRINK:
                 player.addEffect("SICK", 1, 99); // 99 = until game ends or cured
                 return "You drink the spoiled liquid. You feel sick...";
+            default:
+                return "You use the item, but nothing happens.";
         }
-        return "";
     }
 
     // Getters for consumable properties

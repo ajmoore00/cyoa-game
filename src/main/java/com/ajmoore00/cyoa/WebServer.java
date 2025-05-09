@@ -68,8 +68,8 @@ public class WebServer {
                 game = new Adventure();
                 games.put(session.id(), game);
             }
-            int index = Integer.parseInt(req.queryParams("index"));
-            game.useItemFromInventory(index);
+            String id = req.queryParams("id");
+            game.useItemById(id);
             return game.getCurrentSceneAsJson();
         });
 
@@ -82,13 +82,8 @@ public class WebServer {
                 games.put(session.id(), game);
             }
             String action = req.queryParams("action");
-            int itemIndex = -1;
-            try {
-                itemIndex = Integer.parseInt(req.queryParams("itemIndex"));
-            } catch (Exception e) {
-                // ignore, not using item
-            }
-            game.combatAction(action, itemIndex);
+            String id = req.queryParams("id");
+            game.combatAction(action, id);
             return game.getCurrentSceneAsJson();
         });
 
@@ -100,8 +95,8 @@ public class WebServer {
                 game = new Adventure();
                 games.put(session.id(), game);
             }
-            int index = Integer.parseInt(req.queryParams("index"));
-            game.equipWeaponFromInventory(index);
+            String id = req.queryParams("id");
+            game.equipWeaponById(id);
             return game.getCurrentSceneAsJson();
         });
     }

@@ -107,7 +107,7 @@ public class Player {
             if (!Adventure.IS_WEB) System.out.println(result);
             inventory.remove(item);
         } else if (item instanceof Weapon) {
-            setEquippedWeapon((Weapon) item);
+            setEquippedWeapon((Weapon) item); // Always allow equipping any weapon
             if (!Adventure.IS_WEB) System.out.println("You equipped the " + item.getName() + ".");
         } else {
             if (!Adventure.IS_WEB) System.out.println("You can't use that item right now.");
