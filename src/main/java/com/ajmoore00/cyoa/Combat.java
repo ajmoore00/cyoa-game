@@ -5,6 +5,9 @@ import java.util.Scanner;
 public class Combat {
     // Method for running a fight between player and enemy
     public static boolean handleCombat(Player player, Enemy enemy) {
+        if (Adventure.IS_WEB) {
+            throw new IllegalStateException("Combat.handleCombat should not be called in web mode!");
+        }
         Scanner scanner = new Scanner(System.in);
         System.out.println("Combat started! " + enemy.getName() + " has " + enemy.getHealth() + " HP.");
         // While loop for the fight

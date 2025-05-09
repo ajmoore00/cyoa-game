@@ -9,6 +9,14 @@ public class SceneFactory {
             String shipName, String moonName, String planetName, String systemName) {
         Map<String, Scene> scenes = new HashMap<>();
 
+        Scene intro = new Scene(
+            "=== Krylos ===\n" +
+            "Year 2342. You were part of a science crew on the SS Pioneer, heading to Krylos, a moon orbiting the gas giant Virelia in the Helion Drift system.\n" +
+            "Your team picked up weird stuff in the scans. The moon seemed to radiate some kind of energy, and command wanted answers.\n" +
+            "What's your name, engineer?"
+        );
+        // No choices for intro; handled by frontend
+
         Scene cryoWake = new Scene(
             "You wake up in your busted cryo pod on the " + shipName +
             ". The ship is sideways, alarms are off, and your head is pounding. " +
@@ -59,7 +67,13 @@ public class SceneFactory {
         spareParts.addChoice("Grab shuttle parts", "SpareParts");
         spareParts.addChoice("Go back to medbay", "Medbay");
 
-        Scene crashSite = new Scene("");
+        Scene crashSite = new Scene(
+            "\nYou step outside. The landscape is almost blinding—flat, endless, and so stark white it barely seems real. " +
+            "The air is perfectly still, not hot or cold, and the silence is absolute. You feel like you’re standing in a dream.\n" +
+            "Far off, you see something on the horizon. It almost looks like a structure, but the more you stare, " +
+            "the more it seems to shimmer and blur, like a mirage.\n" +
+            "You spot some tracks leading away from the ship, and the SS Pioneer is a twisted wreck behind you."
+        );
         crashSite.addChoice("Follow the tracks", "Tracks");
         crashSite.addChoice("Approach the mirage structure", "MirageWalk");
         crashSite.addChoice("Go back inside", "CryoWake");
@@ -158,6 +172,7 @@ public class SceneFactory {
             "Your vision fades as the cold and silence of Krylos closes in. This is where your story ends."
         );
 
+        scenes.put("Intro", intro);
         scenes.put("CryoWake", cryoWake);
         scenes.put("Storage", storage);
         scenes.put("Bridge", bridge);

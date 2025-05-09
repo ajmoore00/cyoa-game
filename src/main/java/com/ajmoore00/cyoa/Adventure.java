@@ -3,10 +3,12 @@ import java.util.*;
 import com.google.gson.Gson;
 
 public class Adventure {
+    public static boolean IS_WEB = false; // Add this at the top
+
     private Player player;
     private GameState gameState;
     private Map<String, Scene> scenesMap;
-    private Scanner input;
+    private transient Scanner input;
 
     // World/ship names
     private static final String MOON = "Krylos";
@@ -22,14 +24,19 @@ public class Adventure {
     private boolean shuttleFixed = false;
     private boolean medUsed = false;
 
+    private String lastMessage = "";
+    private Enemy currentEnemy = null;
+    private boolean inCombat = false;
+
     // sets up everything for the game
     public Adventure() {
         player = new Player();
         gameState = new GameState();
-        input = new Scanner(System.in);
-        scenesMap = SceneFactory.createScenes(
-            SHIP, MOON, PLANET, SYSTEM
-        );
+        scenesMap = SceneFactory.createScenes(SHIP, MOON, PLANET, SYSTEM);
+        // Only create Scanner if running in console
+        if (!IS_WEB) {
+            input = new Scanner(System.in);
+        }
     }
 
     // this is the main game loop, keeps asking if you wanna play again
@@ -38,11 +45,19 @@ public class Adventure {
         while (again) {
             setupGame();
             playGame();
-            System.out.print("\nPlay again? (y/n): ");
-            String ans = input.nextLine().trim().toLowerCase();
-            again = ans.equals("y") || ans.equals("yes");
+            if (!IS_WEB) {
+                System.out.print("\nPlay again? (y/n): ");
+                String ans = input.nextLine().trim().toLowerCase();
+                again = ans.equals("y") || ans.equals("yes");
+            } else {
+                // web logic
+            }
         }
-        System.out.println("\nThanks for playing!");
+        if (!IS_WEB) {
+            System.out.println("\nThanks for playing!");
+        } else {
+            // web logic
+        }
     }
 
     // resets everything for a new game
@@ -60,23 +75,38 @@ public class Adventure {
         gotDevice = false;
         shuttleFixed = false;
         medUsed = false;
-        System.out.println("=== Krylos ===");
-        System.out.println(
-            "Year 2342. You were part of a science crew on the " + SHIP +
-            ", heading to " + MOON + ", a moon orbiting the gas giant " +
-            PLANET + " in the " + SYSTEM + " system."
-        );
-        System.out.println(
-            "Your team picked up weird stuff in the scans. The moon seemed to radiate some kind of energy, and command wanted answers."
-        );
-        System.out.print("\nWhat's your name, engineer? ");
-        String playerName = input.nextLine();
-        if (playerName == null || playerName.trim().isEmpty())
-            playerName = "Player";
-        player.setName(playerName);
-        System.out.println(
-            "\nYou remember going into cryo, but now you wake up to chaos..."
-        );
+        if (!IS_WEB) {
+            System.out.println("=== Krylos ===");
+            System.out.println(
+                "Year 2342. You were part of a science crew on the " + SHIP +
+                ", heading to " + MOON + ", a moon orbiting the gas giant " +
+                PLANET + " in the " + SYSTEM + " system."
+            );
+            System.out.println(
+                "Your team picked up weird stuff in the scans. The moon seemed to radiate some kind of energy, and command wanted answers."
+            );
+            System.out.print("\nWhat's your name, engineer? ");
+            String playerName = input.nextLine();
+            if (playerName == null || playerName.trim().isEmpty())
+                playerName = "Player";
+            player.setName(playerName);
+            System.out.println(
+                "\nYou remember going into cryo, but now you wake up to chaos..."
+            );
+        } else {
+            // web logic
+        }
+    }
+
+    // Set player name from frontend
+    public void setPlayerName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            player.setName("Player");
+        } else {
+            player.setName(name.trim());
+        }
+        lastMessage = "Welcome, " + player.getName() + "!";
+        gameState.setCurrentScene("CryoWake");
     }
 
     // runs the actual game until you get an ending
@@ -90,34 +120,38 @@ public class Adventure {
             }
         }
         // print out the ending
-        System.out.println("\n=== Ending: " + gameState.getEnding() + " ===");
-        switch (gameState.getEnding()) {
-            case ESCAPE:
-                System.out.println(
-                    "You scramble into the battered escape shuttle, patching wires and praying the engine holds. " +
-                    "As you break atmosphere, you send a warning to the incoming ships: 'Turn back. Krylos isn't safe.' " +
-                    "The mission is scrubbed. You live to engineer another day, but you'll never forget what you saw."
-                );
-                break;
-            case SACRIFICE:
-                System.out.println(
-                    "You activate the device and a blinding white light fills the structure. " +
-                    "You feel the ground shake as everything collapses. The secret of Krylos is buried, but so are you."
-                );
-                break;
-            case DEATH:
-                System.out.println(
-                    "Your vision fades as the cold and silence of Krylos closes in. This is where your story ends."
-                );
-                break;
-            case STAY:
-                System.out.println(
-                    "You stay with the aliens, learning their secrets and exploring the mysteries of " +
-                    MOON + ". The universe feels bigger and stranger than you ever imagined."
-                );
-                break;
-            default:
-                System.out.println("The story ends... for now.");
+        if (!IS_WEB) {
+            System.out.println("\n=== Ending: " + gameState.getEnding() + " ===");
+            switch (gameState.getEnding()) {
+                case ESCAPE:
+                    System.out.println(
+                        "You scramble into the battered escape shuttle, patching wires and praying the engine holds. " +
+                        "As you break atmosphere, you send a warning to the incoming ships: 'Turn back. Krylos isn't safe.' " +
+                        "The mission is scrubbed. You live to engineer another day, but you'll never forget what you saw."
+                    );
+                    break;
+                case SACRIFICE:
+                    System.out.println(
+                        "You activate the device and a blinding white light fills the structure. " +
+                        "You feel the ground shake as everything collapses. The secret of Krylos is buried, but so are you."
+                    );
+                    break;
+                case DEATH:
+                    System.out.println(
+                        "Your vision fades as the cold and silence of Krylos closes in. This is where your story ends."
+                    );
+                    break;
+                case STAY:
+                    System.out.println(
+                        "You stay with the aliens, learning their secrets and exploring the mysteries of " +
+                        MOON + ". The universe feels bigger and stranger than you ever imagined."
+                    );
+                    break;
+                default:
+                    System.out.println("The story ends... for now.");
+            }
+        } else {
+            // web logic
         }
     }
 
@@ -125,43 +159,63 @@ public class Adventure {
     private void showScene() {
         if (player.hasEffect("SICK")) {
             player.setHealth(player.getHealth() - 1);
-            System.out.println("You feel sick. (-1 health)");
+            if (!IS_WEB) {
+                System.out.println("You feel sick. (-1 health)");
+            } else {
+                // web logic
+            }
         }
         Scene scene = scenesMap.get(gameState.getCurrentScene());
         if (scene == null) {
-            System.out.println("Scene not found!");
+            if (!IS_WEB) {
+                System.out.println("Scene not found!");
+            } else {
+                // web logic
+            }
             gameState.setEnding(GameState.Ending.DEATH);
             return;
         }
         if (gameState.getCurrentScene().equals("CrashSite")) {
-            System.out.println(
-                "\nYou step outside. The landscape is almost blinding—flat, endless, and so stark white it barely seems real. " +
-                "The air is perfectly still, not hot or cold, and the silence is absolute. You feel like you’re standing in a dream."
-            );
-            System.out.println(
-                "Far off, you see something on the horizon. It almost looks like a structure, but the more you stare, " +
-                "the more it seems to shimmer and blur, like a mirage."
-            );
-            System.out.println(
-                "You spot some tracks leading away from the ship, and the " + SHIP + " is a twisted wreck behind you."
-            );
+            if (!IS_WEB) {
+                System.out.println(
+                    "\nYou step outside. The landscape is almost blinding—flat, endless, and so stark white it barely seems real. " +
+                    "The air is perfectly still, not hot or cold, and the silence is absolute. You feel like you’re standing in a dream."
+                );
+                System.out.println(
+                    "Far off, you see something on the horizon. It almost looks like a structure, but the more you stare, " +
+                    "the more it seems to shimmer and blur, like a mirage."
+                );
+                System.out.println(
+                    "You spot some tracks leading away from the ship, and the " + SHIP + " is a twisted wreck behind you."
+                );
+            } else {
+                // web logic
+            }
         } else {
-            System.out.println("\n" + scene.getDescription());
+            if (!IS_WEB) {
+                System.out.println("\n" + scene.getDescription());
+            } else {
+                // web logic
+            }
         }
-        int i = 1;
-        // loop through all the choices and print them
-        for (String choice : scene.getChoices().keySet()) {
-            if (
-                choice.equals("Use the device to destroy the structure and everything inside")
-                && !gotDevice
-            ) continue;
-            if (
-                choice.equals("Leave for the shuttle")
-                && !(shuttleFixed || (gotWrench && gotCutter && gotParts))
-            ) continue;
-            System.out.println(i++ + ". " + choice);
+        if (!IS_WEB) {
+            int i = 1;
+            // loop through all the choices and print them
+            for (String choice : scene.getChoices().keySet()) {
+                if (
+                    choice.equals("Use the device to destroy the structure and everything inside")
+                    && !gotDevice
+                ) continue;
+                if (
+                    choice.equals("Leave for the shuttle")
+                    && !(shuttleFixed || (gotWrench && gotCutter && gotParts))
+                ) continue;
+                System.out.println(i++ + ". " + choice);
+            }
+            System.out.println(i + ". Open backpack");
+        } else {
+            // web logic
         }
-        System.out.println(i + ". Open backpack");
     }
 
     // gets what the player wants to do next
@@ -187,204 +241,34 @@ public class Adventure {
         }
         int choiceNum = -1;
         // ask until you get a valid number
-        while (choiceNum < 1 || choiceNum > options.size() + 1) {
-            System.out.print("What do you do? (Enter number): ");
-            try {
-                choiceNum = Integer.parseInt(input.nextLine());
-            } catch (NumberFormatException e) {
-                choiceNum = -1;
+        if (!IS_WEB) {
+            while (choiceNum < 1 || choiceNum > options.size() + 1) {
+                System.out.print("What do you do? (Enter number): ");
+                try {
+                    choiceNum = Integer.parseInt(input.nextLine());
+                } catch (NumberFormatException e) {
+                    choiceNum = -1;
+                }
             }
+        } else {
+            // web logic
         }
         // backpack option
-        if (choiceNum == options.size() + 1) {
-            player.showBackpack(input);
-            getPlayerChoice();
-            return;
+        if (!IS_WEB) {
+            if (choiceNum == options.size() + 1) {
+                player.showBackpack(input);
+                getPlayerChoice();
+                return;
+            }
+        } else {
+            // web logic
         }
         String choice = options.get(choiceNum - 1);
         gameState.setLastChoice(choice);
         String nextScene = scene.getChoices().get(choice);
 
-        // Storage room logic: give wrench if searching for tools
-        if (
-            gameState.getCurrentScene().equals("Storage")
-            && choice.equals("Search for tools")
-        ) {
-            if (!gotWrench) {
-                Weapon wrench = new Weapon(
-                    "Wrench",
-                    "A heavy wrench. Not ideal, but better than nothing.",
-                    8
-                );
-                player.addItem(wrench);
-                gotWrench = true;
-                if (
-                    player.getEquippedWeapon() == null
-                    || wrench.getDamage() > player.getEquippedWeapon().getDamage()
-                ) {
-                    player.setEquippedWeapon(wrench);
-                    System.out.println(
-                        "You find a sturdy wrench and add it to your gear. You equip it."
-                    );
-                } else {
-                    System.out.println(
-                        "You find a sturdy wrench and add it to your gear."
-                    );
-                }
-            } else {
-                System.out.println("You already grabbed the wrench.");
-            }
+        if (handleChoiceLogic(gameState.getCurrentScene(), choice, true)) {
             return;
-        }
-
-        // Workshop logic: give plasma cutter if grabbing it
-        if (
-            gameState.getCurrentScene().equals("Workshop")
-            && choice.equals("Grab plasma cutter")
-        ) {
-            if (!gotCutter) {
-                Weapon plasmaCutter = new Weapon(
-                    "Plasma Cutter",
-                    "A plasma cutter. This could do some real damage.",
-                    20
-                );
-                player.addItem(plasmaCutter);
-                gotCutter = true;
-                if (
-                    player.getEquippedWeapon() == null
-                    || plasmaCutter.getDamage() > player.getEquippedWeapon().getDamage()
-                ) {
-                    player.setEquippedWeapon(plasmaCutter);
-                    System.out.println(
-                        "You grab the plasma cutter and add it to your gear. You equip it."
-                    );
-                } else {
-                    System.out.println(
-                        "You grab the plasma cutter and add it to your gear."
-                    );
-                }
-            } else {
-                System.out.println("You already grabbed the plasma cutter.");
-            }
-            return;
-        }
-
-        // Medbay logic
-        if (
-            gameState.getCurrentScene().equals("Medbay")
-            && choice.equals("Take a med-stim")
-        ) {
-            if (!medUsed) {
-                player.addItem(
-                    new Consumable(
-                        "Med-Stim",
-                        "Heals 50 health.",
-                        Consumable.ConsumableType.MED_STIM,
-                        50,
-                        0
-                    )
-                );
-                medUsed = true;
-                System.out.println(
-                    "You grab a med-stim from the dispenser and stash it in your backpack."
-                );
-            } else {
-                System.out.println(
-                    "The dispenser is empty. Someone already took the last med-stim."
-                );
-            }
-            return;
-        }
-        if (
-            gameState.getCurrentScene().equals("Medbay")
-            && choice.equals("Continue down the hall")
-        ) {
-            gameState.setCurrentScene("SpareParts");
-            return;
-        }
-
-        // Spare Parts logic
-        if (
-            gameState.getCurrentScene().equals("SpareParts")
-            && choice.equals("Grab shuttle parts")
-        ) {
-            if (!gotParts) {
-                gotParts = true;
-                System.out.println(
-                    "You grab the box labeled 'Shuttle Parts' and lug it with you."
-                );
-            } else {
-                System.out.println("You already have the shuttle parts.");
-            }
-            return;
-        }
-
-        // Shuttle fix/leave logic
-        if (
-            gameState.getCurrentScene().equals("ShuttleBay")
-            && choice.equals("Try to fix the shuttle")
-        ) {
-            if (gotWrench && gotCutter && gotParts) {
-                System.out.println(
-                    "You use the wrench, plasma cutter, and shuttle parts to patch up the shuttle. " +
-                    "It's barely holding together, but it might just work."
-                );
-                shuttleFixed = true;
-                System.out.print("Do you want to leave now? (y/n): ");
-                String leave = input.nextLine().trim().toLowerCase();
-                if (leave.equals("y") || leave.equals("yes")) {
-                    gameState.setEnding(GameState.Ending.ESCAPE);
-                    return;
-                } else {
-                    System.out.println(
-                        "You look over your patched-together shuttle. It's ugly, but it might fly."
-                    );
-                    gameState.setCurrentScene("ShuttleBayFixed");
-                    return;
-                }
-            } else {
-                System.out.println(
-                    "You don't have the necessary tools to fix the shuttle."
-                );
-                return;
-            }
-        }
-        if (
-            gameState.getCurrentScene().equals("ShuttleBayFixed")
-            && choice.equals("Escape on the shuttle")
-        ) {
-            gameState.setEnding(GameState.Ending.ESCAPE);
-            return;
-        }
-
-        // Beast fight logic: go straight to combat
-        if (
-            gameState.getCurrentScene().equals("LargeCreatureEncounter")
-            && choice.equals("Fight it")
-        ) {
-            Enemy bigMonster = new Enemy(
-                "Massive Pale Beast",
-                70,
-                16
-            );
-            boolean survived = Combat.handleCombat(player, bigMonster);
-            if (!survived) {
-                System.out.println(
-                    "The creature's claws tear through your suit. You fall, the world going white."
-                );
-                gameState.setEnding(GameState.Ending.DEATH);
-                return;
-            } else {
-                System.out.println(
-                    "You barely survive, heart pounding. The creature drops something as it collapses."
-                );
-                gotDevice = true;
-                System.out.println(
-                    "You grab the device from the creature's hand. It's clearly from your ship—a powerful explosive, maybe meant for emergencies. Why did the creature have it?"
-                );
-                gameState.setCurrentScene("PostCombatLarge");
-                return;
-            }
         }
 
         // Handle endings
@@ -408,20 +292,200 @@ public class Adventure {
         }
     }
 
+    // Processes a choice from the frontend (handles all game logic for web)
+    public void makeChoice(String choiceText) {
+        Scene scene = scenesMap.get(gameState.getCurrentScene());
+        if (scene == null) return;
+        String current = gameState.getCurrentScene();
+        String nextScene = scene.getChoices().get(choiceText);
+
+        if (handleChoiceLogic(current, choiceText, false)) {
+            return;
+        }
+
+        // Handle endings
+        if (nextScene != null && nextScene.startsWith("END_")) {
+            switch (nextScene) {
+                case "END_ESCAPE":
+                    gameState.setEnding(GameState.Ending.ESCAPE);
+                    lastMessage = "You escape and warn the others. The moon stays a mystery, at least for now.";
+                    break;
+                case "END_DEATH":
+                    gameState.setEnding(GameState.Ending.DEATH);
+                    lastMessage = "Your vision fades as the cold and silence of Krylos closes in. This is where your story ends.";
+                    break;
+                case "END_SACRIFICE":
+                    gameState.setEnding(GameState.Ending.SACRIFICE);
+                    lastMessage = "You activate the device and a blinding white light fills the structure. You feel the ground shake as everything collapses. The secret of Krylos is buried, but so are you.";
+                    break;
+                case "END_STAY":
+                    gameState.setEnding(GameState.Ending.STAY);
+                    lastMessage = "You stay with the aliens, learning their secrets and exploring the mysteries of Krylos. The universe feels bigger and stranger than you ever imagined.";
+                    break;
+            }
+        } else if (nextScene != null) {
+            gameState.setCurrentScene(nextScene);
+            lastMessage = "";
+        }
+
+        if (gameState.getEnding() == null) {
+            if (Math.random() < 0.3) { // or always, for testing
+                triggerRandomEvent();
+            }
+        }
+    }
+
+    /**
+     * Handles the logic for a player choice, for both console and web.
+     * Returns true if the choice was handled (special logic), false if normal scene transition.
+     */
+    private boolean handleChoiceLogic(String current, String choice, boolean isConsole) {
+        // Storage room logic
+        if (current.equals("Storage") && choice.equals("Search for tools")) {
+            if (!gotWrench) {
+                Weapon wrench = new Weapon(
+                    "Wrench",
+                    "A heavy wrench. Not ideal, but better than nothing.",
+                    8
+                );
+                player.addItem(wrench);
+                gotWrench = true;
+                if (!IS_WEB) System.out.println("You find a sturdy wrench and add it to your gear.");
+                else lastMessage = "You find a sturdy wrench and add it to your gear.";
+            } else {
+                if (!IS_WEB) System.out.println("You already grabbed the wrench.");
+                else lastMessage = "You already grabbed the wrench.";
+            }
+            return true;
+        }
+
+        // Workshop logic
+        if (current.equals("Workshop") && choice.equals("Grab plasma cutter")) {
+            if (!gotCutter) {
+                Weapon plasmaCutter = new Weapon(
+                    "Plasma Cutter",
+                    "A plasma cutter. This could do some real damage.",
+                    20
+                );
+                player.addItem(plasmaCutter);
+                gotCutter = true;
+                if (!IS_WEB) System.out.println("You grab the plasma cutter and add it to your gear.");
+                else lastMessage = "You grab the plasma cutter and add it to your gear.";
+            } else {
+                if (!IS_WEB) System.out.println("You already grabbed the plasma cutter.");
+                else lastMessage = "You already grabbed the plasma cutter.";
+            }
+            return true;
+        }
+
+        // Medbay logic
+        if (current.equals("Medbay") && choice.equals("Take a med-stim")) {
+            if (!medUsed) {
+                player.addItem(
+                    new Consumable(
+                        "Med-Stim",
+                        "Heals 50 health.",
+                        Consumable.ConsumableType.MED_STIM,
+                        50,
+                        0
+                    )
+                );
+                medUsed = true;
+                if (isConsole) System.out.println("You grab a med-stim from the dispenser and stash it in your backpack.");
+                else lastMessage = "You grab a med-stim from the dispenser and stash it in your backpack.";
+            } else {
+                if (isConsole) System.out.println("The dispenser is empty. Someone already took the last med-stim.");
+                else lastMessage = "The dispenser is empty. Someone already took the last med-stim.";
+            }
+            return true;
+        }
+
+        // Spare Parts logic
+        if (current.equals("SpareParts") && choice.equals("Grab shuttle parts")) {
+            if (!gotParts) {
+                gotParts = true;
+                if (isConsole) System.out.println("You grab the box labeled 'Shuttle Parts' and lug it with you.");
+                else lastMessage = "You grab the box labeled 'Shuttle Parts' and lug it with you.";
+            } else {
+                if (isConsole) System.out.println("You already have the shuttle parts.");
+                else lastMessage = "You already have the shuttle parts.";
+            }
+            return true;
+        }
+
+        // Shuttle fix/leave logic
+        if (current.equals("ShuttleBay") && choice.equals("Try to fix the shuttle")) {
+            if (gotWrench && gotCutter && gotParts) {
+                shuttleFixed = true;
+                if (isConsole) {
+                    System.out.println("You use the wrench, plasma cutter, and shuttle parts to patch up the shuttle. It's barely holding together, but it might just work.");
+                    System.out.print("Do you want to leave now? (y/n): ");
+                    String leave = input.nextLine().trim().toLowerCase();
+                    if (leave.equals("y") || leave.equals("yes")) {
+                        gameState.setEnding(GameState.Ending.ESCAPE);
+                    } else {
+                        System.out.println("You look over your patched-together shuttle. It's ugly, but it might fly.");
+                        gameState.setCurrentScene("ShuttleBayFixed");
+                    }
+                } else {
+                    lastMessage = "You use the wrench, plasma cutter, and shuttle parts to patch up the shuttle. It's barely holding together, but it might just work.";
+                    gameState.setCurrentScene("ShuttleBayFixed");
+                }
+            } else {
+                if (isConsole) System.out.println("You don't have the necessary tools to fix the shuttle.");
+                else lastMessage = "You don't have the necessary tools to fix the shuttle.";
+            }
+            return true;
+        }
+
+        if (current.equals("ShuttleBayFixed") && choice.equals("Escape on the shuttle")) {
+            gameState.setEnding(GameState.Ending.ESCAPE);
+            if (!isConsole) lastMessage = "You escape and warn the others. The moon stays a mystery, at least for now.";
+            return true;
+        }
+
+        // Beast fight logic
+        if (current.equals("LargeCreatureEncounter") && choice.equals("Fight it")) {
+            if (isConsole) {
+                Enemy bigMonster = new Enemy("Massive Pale Beast", 70, 16);
+                boolean survived = Combat.handleCombat(player, bigMonster);
+                if (!survived) {
+                    System.out.println("The creature's claws tear through your suit. You fall, the world going white.");
+                    gameState.setEnding(GameState.Ending.DEATH);
+                } else {
+                    System.out.println("You barely survive, heart pounding. The creature drops something as it collapses.");
+                    gotDevice = true;
+                    System.out.println("You grab the device from the creature's hand. It's clearly from your ship—a powerful explosive, maybe meant for emergencies. Why did the creature have it?");
+                    gameState.setCurrentScene("PostCombatLarge");
+                }
+            } else {
+                // Start web combat!
+                if (!inCombat) {
+                    startCombat(new Enemy("Massive Pale Beast", 70, 16));
+                }
+            }
+            return true;
+        }
+
+        return false; // Not a special case, do normal scene transition
+    }
+
     // does a random event, like finding a snack or fighting a critter
     private void triggerRandomEvent() {
-        int roll = new Random().nextInt(4);
-        switch (roll) {
-            case 0:
+        RandomEvent event = RandomEvent.generateEvent();
+        String type = event.getEventType();
+        String desc = event.getDescription();
+        if (!IS_WEB) System.out.println(desc);
+        lastMessage = desc;
+
+        switch (type) {
+            case "Mystery Snack":
                 boolean gotSnack = false;
                 for (Item i : player.getInventory()) {
                     if (i.getName().equals("Mystery Snack"))
                         gotSnack = true;
                 }
                 if (!gotSnack) {
-                    System.out.println(
-                        "You spot a sealed snack bar in a locker. Looks weird, but it's probably edible."
-                    );
                     player.addItem(
                         new Consumable(
                             "Mystery Snack",
@@ -433,16 +497,13 @@ public class Adventure {
                     );
                 }
                 break;
-            case 1:
+            case "Spoiled Drink":
                 boolean gotDrink = false;
                 for (Item i : player.getInventory()) {
                     if (i.getName().equals("Spoiled Drink"))
                         gotDrink = true;
                 }
                 if (!gotDrink) {
-                    System.out.println(
-                        "You find a bottle of something left out since before cryo. It smells... off."
-                    );
                     player.addItem(
                         new Consumable(
                             "Spoiled Drink",
@@ -454,10 +515,7 @@ public class Adventure {
                     );
                 }
                 break;
-            case 2:
-                System.out.println(
-                    "You find a first aid kit wedged under a seat. There's a med-stim inside."
-                );
+            case "Med-Stim":
                 player.addItem(
                     new Consumable(
                         "Med-Stim",
@@ -468,23 +526,69 @@ public class Adventure {
                     )
                 );
                 break;
-            case 3:
-                System.out.println(
-                    "You hear scratching from a vent. Suddenly, a moon critter bursts out!"
-                );
-                Enemy enemy = new Enemy(
-                    "Moon Critter",
-                    18,
-                    7
-                );
-                boolean survived = Combat.handleCombat(player, enemy);
-                if (!survived) {
-                    System.out.println("You got wrecked by a moon critter. RIP.");
-                    gameState.setEnding(GameState.Ending.DEATH);
+            case "Enemy Encounter":
+                Enemy enemy = new Enemy("Moon Critter", 18, 7);
+                if (!IS_WEB) {
+                    Combat.handleCombat(player, enemy);
                 } else {
-                    System.out.println("You survived the critter attack. Barely.");
+                    // Start web combat!
+                    if (!inCombat) {
+                        startCombat(enemy);
+                    }
                 }
                 break;
+        }
+    }
+
+    // Start a combat encounter (for web)
+    public void startCombat(Enemy enemy) {
+        this.currentEnemy = enemy;
+        this.inCombat = true;
+        lastMessage = "Combat started! " + enemy.getName() + " has " + enemy.getHealth() + " HP.";
+    }
+
+    // Handle a combat turn (for web)
+    public void combatAction(String action, int itemIndex) {
+        if (!inCombat || currentEnemy == null) {
+            lastMessage = "No enemy to fight!";
+            return;
+        }
+        switch (action) {
+            case "attack":
+                int playerDamage = player.attack();
+                currentEnemy.takeDamage(playerDamage);
+                lastMessage = "You attack for " + playerDamage + " damage.";
+                break;
+            case "useItem":
+                useItemFromInventory(itemIndex);
+                break;
+            case "run":
+                lastMessage = "You try to run! " + currentEnemy.getName() + " gets a free attack as you escape!";
+                currentEnemy.attack(player);
+                inCombat = false;
+                currentEnemy = null;
+                return;
+        }
+        // Enemy turn if enemy is still alive and player didn't run
+        if (inCombat && currentEnemy != null && !currentEnemy.isDefeated()) {
+            lastMessage += " " + currentEnemy.getName() + " attacks you for " + currentEnemy.getDamage() + " damage.";
+            currentEnemy.attack(player);
+        }
+        // Check for end of combat
+        if (player.getHealth() <= 0) {
+            gameState.setEnding(GameState.Ending.DEATH);
+            lastMessage += " You got knocked out by the " + currentEnemy.getName() + "...";
+            inCombat = false;
+            currentEnemy = null;
+        } else if (currentEnemy.isDefeated()) {
+            lastMessage += " You defeated the " + currentEnemy.getName() + "!";
+            inCombat = false;
+            // Special logic for large creature
+            if ("Massive Pale Beast".equals(currentEnemy.getName())) {
+                gotDevice = true;
+                gameState.setCurrentScene("PostCombatLarge");
+            }
+            currentEnemy = null;
         }
     }
 
@@ -498,24 +602,63 @@ public class Adventure {
         data.put("ending", gameState.getEnding());
         data.put("playerHealth", player.getHealth());
         data.put("playerMaxHealth", player.getMaxHealth());
-        data.put("inventory", player.getInventory());
+        // Build inventory with type info
+        List<Map<String, Object>> inv = new ArrayList<>();
+        for (Item item : player.getInventory()) {
+            Map<String, Object> itemMap = new HashMap<>();
+            itemMap.put("name", item.getName());
+            itemMap.put("description", item.getDescription());
+            itemMap.put("type", item.getType());
+            inv.add(itemMap);
+        }
+        data.put("inventory", inv);
+        data.put("playerName", player.getName());
+        data.put("lastMessage", lastMessage);
+        data.put("inCombat", inCombat);
+        data.put("equippedWeapon", player.getEquippedWeapon() != null ? player.getEquippedWeapon().getName() : null);
+        if (inCombat && currentEnemy != null) {
+            Map<String, Object> enemyData = new HashMap<>();
+            enemyData.put("name", currentEnemy.getName());
+            enemyData.put("health", currentEnemy.getHealth());
+            enemyData.put("damage", currentEnemy.getDamage());
+            data.put("enemy", enemyData);
+        }
         return new Gson().toJson(data);
     }
 
-    // Processes a choice from the frontend
-    public void makeChoice(String choiceText) {
-        Scene scene = scenesMap.get(gameState.getCurrentScene());
-        if (scene == null) return;
-        // Find the next scene key for the given choice text
-        String nextScene = scene.getChoices().get(choiceText);
-        if (nextScene != null) {
-            gameState.setCurrentScene(nextScene);
+    public void useItemFromInventory(int index) {
+        lastMessage = "";
+        if (index < 0 || index >= player.getInventory().size()) {
+            lastMessage = "Invalid item selection.";
+            return;
         }
-        // You may want to add more logic here to handle inventory, combat, endings, etc.
+        Item item = player.getInventory().get(index);
+        if (item instanceof Consumable) {
+            lastMessage = player.useItem(item);
+            player.getInventory().remove(item);
+        } else {
+            lastMessage = "You can't use that item right now.";
+        }
     }
 
-    // this is just the main thing to start the game
+    public void equipWeaponFromInventory(int index) {
+        lastMessage = "";
+        if (index < 0 || index >= player.getInventory().size()) {
+            lastMessage = "Invalid item selection.";
+            return;
+        }
+        Item item = player.getInventory().get(index);
+        if (item instanceof Weapon) {
+            player.equipWeapon(index);
+            lastMessage = "You equipped the " + item.getName() + ".";
+        } else {
+            lastMessage = "That's not a weapon!";
+        }
+    }
+
+    // Only run the console game if this is the main class being executed
     public static void main(String[] args) {
+        Adventure.IS_WEB = false; // Add this line
         Adventure game = new Adventure();
         game.start();
     }

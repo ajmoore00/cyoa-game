@@ -22,25 +22,23 @@ public class Consumable extends Item {
     }
 
     // Method for using the consumable
-    public void use(Player player) {
+    public String use(Player player) {
         switch(type) {
             case MED_STIM:
                 player.setHealth(player.getHealth() + value);
-                System.out.println("You use a med-stim and feel a lot better.");
-                break;
+                return "You use a med-stim and feel a lot better.";
             case MYSTERY_SNACK:
                 player.setMaxHealth(player.getMaxHealth() + 10);
-                System.out.println("You eat the mystery snack. Your max health increases by 10!");
-                break;
+                return "You eat the mystery snack. Your max health increases by 10!";
             case SPOILED_DRINK:
                 player.addEffect("SICK", 1, 99); // 99 = until game ends or cured
-                System.out.println("You drink the spoiled liquid. You feel sick...");
-                break;
+                return "You drink the spoiled liquid. You feel sick...";
         }
+        return "";
     }
 
     // Getters for consumable properties
     public int getDuration() { return duration; }
     public int getValue() { return value; }
-    public ConsumableType getType() { return type; }
+    public ConsumableType getConsumableType() { return type; }
 }

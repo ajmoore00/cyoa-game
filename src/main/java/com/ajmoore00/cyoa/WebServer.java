@@ -1,7 +1,6 @@
 package com.ajmoore00.cyoa;
 
 import static spark.Spark.*;
-import com.google.gson.Gson;
 import spark.Session;
 
 import java.util.HashMap;
@@ -12,9 +11,9 @@ public class WebServer {
     private static Map<String, Adventure> games = new HashMap<>();
 
     public static void main(String[] args) {
+        Adventure.IS_WEB = true; // Add this line
         port(4567);
         staticFiles.location("/public"); // Serve files from src/main/resources/public
-        Gson gson = new Gson();
 
         // Endpoint: start a new game
         post("/start", (req, res) -> {
@@ -45,6 +44,64 @@ public class WebServer {
             }
             String choice = req.queryParams("choice");
             game.makeChoice(choice);
+            return game.getCurrentSceneAsJson();
+        });
+
+        // Endpoint: set player name
+        post("/set-name", (req, res) -> {
+            Session session = req.session(true);
+            Adventure game = games.get(session.id());
+            if (game == null) {
+                game = new Adventure();
+                games.put(session.id(), game);
+            }
+            String name = req.queryParams("name");
+            game.setPlayerName(name);
+            return game.getCurrentSceneAsJson();
+        });
+
+        // Endpoint: use item from backpack
+        post("/use-item", (req, res) -> {
+            Session session = req.session(true);
+            Adventure game = games.get(session.id());
+            if (game == null) {
+                game = new Adventure();
+                games.put(session.id(), game);
+            }
+            int index = Integer.parseInt(req.queryParams("index"));
+            game.useItemFromInventory(index);
+            return game.getCurrentSceneAsJson();
+        });
+
+        // Endpoint: take a combat action
+        post("/combat", (req, res) -> {
+            Session session = req.session(true);
+            Adventure game = games.get(session.id());
+            if (game == null) {
+                game = new Adventure();
+                games.put(session.id(), game);
+            }
+            String action = req.queryParams("action");
+            int itemIndex = -1;
+            try {
+                itemIndex = Integer.parseInt(req.queryParams("itemIndex"));
+            } catch (Exception e) {
+                // ignore, not using item
+            }
+            game.combatAction(action, itemIndex);
+            return game.getCurrentSceneAsJson();
+        });
+
+        // Endpoint: equip weapon from backpack
+        post("/equip-weapon", (req, res) -> {
+            Session session = req.session(true);
+            Adventure game = games.get(session.id());
+            if (game == null) {
+                game = new Adventure();
+                games.put(session.id(), game);
+            }
+            int index = Integer.parseInt(req.queryParams("index"));
+            game.equipWeaponFromInventory(index);
             return game.getCurrentSceneAsJson();
         });
     }

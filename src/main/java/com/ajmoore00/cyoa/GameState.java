@@ -16,7 +16,7 @@ public class GameState {
     
     // Constructor for game state
     public GameState() {
-        currentScene = "CryoWake"; // <-- change from "Start" to "CryoWake"
+        currentScene = "Intro"; // Start at Intro scene for web
         lastChoice = "";
         ending = null;
     }

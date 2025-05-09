@@ -35,7 +35,7 @@ public class Player {
     // Method to add a status effect
     public void addEffect(String effectType, int value, int duration) {
         activeEffects.put(effectType, new Effect(value, duration));
-        System.out.println("Applied " + effectType + " effect for " + duration + " turns");
+        if (!Adventure.IS_WEB) System.out.println("Applied " + effectType + " effect for " + duration + " turns");
     }
 
     // Method to update all effects (remove if done)
@@ -44,7 +44,7 @@ public class Player {
             Effect effect = entry.getValue();
             effect.duration--;
             if (effect.duration <= 0) {
-                System.out.println(entry.getKey() + " effect has worn off");
+                if (!Adventure.IS_WEB) System.out.println(entry.getKey() + " effect has worn off");
                 return true;
             }
             return false;
@@ -72,24 +72,26 @@ public class Player {
     }
 
     // Use an item (like a med-stim)
-    public void useItem(Item item) {
+    public String useItem(Item item) {
         if (item instanceof Consumable) {
-            ((Consumable) item).use(this);
+            return ((Consumable) item).use(this);
         }
+        return "";
     }
 
     // Show backpack and let player use an item
     public void showBackpack(Scanner scanner) {
         if (inventory.isEmpty()) {
-            System.out.println("Your backpack is empty.");
+            if (!Adventure.IS_WEB) System.out.println("Your backpack is empty.");
             return;
         }
-        System.out.println("Backpack:");
+        if (!Adventure.IS_WEB) System.out.println("Backpack:");
         for (int i = 0; i < inventory.size(); i++) {
             Item item = inventory.get(i);
-            System.out.println((i + 1) + ". " + item.getName() + " - " + item.getDescription());
+            String eq = (item == equippedWeapon) ? " (equipped)" : "";
+            if (!Adventure.IS_WEB) System.out.println((i + 1) + ". " + item.getName() + eq + " - " + item.getDescription());
         }
-        System.out.print("Choose an item to use (number), or 0 to go back: ");
+        if (!Adventure.IS_WEB) System.out.print("Choose an item to use/equip (number), or 0 to go back: ");
         int choice = -1;
         while (choice < 0 || choice > inventory.size()) {
             try {
@@ -100,9 +102,15 @@ public class Player {
         }
         if (choice == 0) return;
         Item item = inventory.get(choice - 1);
-        useItem(item);
         if (item instanceof Consumable) {
+            String result = useItem(item);
+            if (!Adventure.IS_WEB) System.out.println(result);
             inventory.remove(item);
+        } else if (item instanceof Weapon) {
+            setEquippedWeapon((Weapon) item);
+            if (!Adventure.IS_WEB) System.out.println("You equipped the " + item.getName() + ".");
+        } else {
+            if (!Adventure.IS_WEB) System.out.println("You can't use that item right now.");
         }
     }
 
@@ -118,4 +126,15 @@ public class Player {
     public void addItem(Item item) { inventory.add(item); }
     public void removeItem(Item item) { inventory.remove(item); }
     public ArrayList<Item> getInventory() { return inventory; }
+
+    public void equipWeapon(int index) {
+        Item item = inventory.get(index);
+        if (item instanceof Weapon) {
+            setEquippedWeapon((Weapon) item);
+        }
+    }
+    public int getEquippedWeaponIndex() {
+        if (equippedWeapon == null) return -1;
+        return inventory.indexOf(equippedWeapon);
+    }
 }

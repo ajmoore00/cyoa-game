@@ -14,4 +14,8 @@ public abstract class Item {
     // Getters for item properties
     public String getName() { return name; }
     public String getDescription() { return description; }
+
+    public String getType() {
+        return this instanceof Weapon ? "Weapon" : this instanceof Consumable ? "Consumable" : "Other";
+    }
 }
