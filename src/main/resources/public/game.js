@@ -1,7 +1,5 @@
 function setTheme(sceneKey) {
-  // Remove all theme classes
   document.body.className = '';
-  // Map scene keys to themes
   if (["CryoWake", "Storage", "Bridge", "Workshop", "Medbay", "SpareParts"].includes(sceneKey)) {
     document.body.classList.add('theme-ship');
   } else if (["CrashSite", "Tracks"].includes(sceneKey)) {
@@ -19,6 +17,17 @@ function setTheme(sceneKey) {
   }
 }
 
+function createActionButton(text, handler) {
+  const btn = document.createElement('button');
+  btn.innerText = text;
+  btn.onclick = async (e) => {
+    btn.disabled = true;
+    await handler(e);
+    btn.disabled = false;
+  };
+  return btn;
+}
+
 async function startGame() {
   await fetch('/start', { method: 'POST' });
   loadScene();
@@ -27,7 +36,11 @@ async function startGame() {
 async function loadScene() {
   const res = await fetch('/scene');
   const data = await res.json();
-  setTheme(data.scene); // <-- Add this line
+  renderScene(data);
+}
+
+function renderScene(data) {
+  setTheme(data.scene);
   const sceneDiv = document.getElementById('scene');
   const choicesDiv = document.getElementById('choices');
   sceneDiv.innerText = data.description;
@@ -35,8 +48,8 @@ async function loadScene() {
   document.getElementById('ending').innerText = '';
   document.getElementById('restart').style.display = 'none';
 
-  // Show feedback message
-  if (data.lastMessage) {
+  // Show feedback message FIRST
+  if (data.lastMessage && data.lastMessage.trim() !== "") {
     const msg = document.createElement('div');
     msg.innerText = data.lastMessage;
     msg.className = "feedback-message";
@@ -50,49 +63,43 @@ async function loadScene() {
     choicesDiv.appendChild(enemyDiv);
 
     // Attack button
-    const attackBtn = document.createElement('button');
-    attackBtn.innerText = "Attack";
-    attackBtn.onclick = async () => {
-      await fetch('/combat', {
+    choicesDiv.appendChild(createActionButton("Attack", async () => {
+      const res = await fetch('/combat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'action=attack&itemIndex=-1'
       });
-      loadScene();
-    };
-    choicesDiv.appendChild(attackBtn);
+      const data = await res.json();
+      renderScene(data);
+    }));
 
     // Use item buttons
     if (data.inventory && data.inventory.length > 0) {
-      data.inventory.forEach((item, idx) => {
+      data.inventory.forEach((item) => {
         if (item.type === "Consumable") {
-          const btn = document.createElement('button');
-          btn.innerText = `Use ${item.name}`;
-          btn.onclick = async () => {
-            await fetch('/combat', {
+          choicesDiv.appendChild(createActionButton(`Use ${item.name}`, async () => {
+            const res = await fetch('/use-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `action=useItem&id=${encodeURIComponent(item.id)}`
+              body: 'id=' + encodeURIComponent(item.id)
             });
-            loadScene();
-          };
-          choicesDiv.appendChild(btn);
+            const data = await res.json();
+            renderScene(data);
+          }));
         }
       });
     }
 
     // Run button
-    const runBtn = document.createElement('button');
-    runBtn.innerText = "Run";
-    runBtn.onclick = async () => {
-      await fetch('/combat', {
+    choicesDiv.appendChild(createActionButton("Run", async () => {
+      const res = await fetch('/combat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'action=run&itemIndex=-1'
       });
-      loadScene();
-    };
-    choicesDiv.appendChild(runBtn);
+      const data = await res.json();
+      renderScene(data);
+    }));
 
     // Show inventory summary
     showInventory(data.inventory, data.playerHealth, data.playerMaxHealth, data.playerName);
@@ -106,26 +113,25 @@ async function loadScene() {
     input.placeholder = "Enter your name";
     input.id = "nameInput";
     choicesDiv.appendChild(input);
-    const btn = document.createElement('button');
-    btn.innerText = "Continue";
-    btn.onclick = async () => {
+    choicesDiv.appendChild(createActionButton("Continue", async () => {
       const name = document.getElementById('nameInput').value;
-      await fetch('/set-name', {
+      const res = await fetch('/set-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'name=' + encodeURIComponent(name)
       });
-      loadScene();
-    };
-    choicesDiv.appendChild(btn);
+      const data = await res.json();
+      renderScene(data);
+    }));
     return;
   }
 
   // Backpack button
-  const backpackBtn = document.createElement('button');
-  backpackBtn.innerText = "Open Backpack";
-  backpackBtn.onclick = showBackpack;
-  choicesDiv.appendChild(backpackBtn);
+  choicesDiv.appendChild(createActionButton("Open Backpack", async () => {
+    const res = await fetch('/scene');
+    const data = await res.json();
+    showBackpack(data);
+  }));
 
   if (data.ending) {
     document.getElementById('ending').innerText = 'Ending: ' + data.ending;
@@ -133,18 +139,17 @@ async function loadScene() {
     return;
   }
 
+  // Scene choices
   for (const choice of data.choices) {
-    const btn = document.createElement('button');
-    btn.innerText = choice;
-    btn.onclick = async () => {
-      await fetch('/choice', {
+    choicesDiv.appendChild(createActionButton(choice, async () => {
+      const res = await fetch('/choice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'choice=' + encodeURIComponent(choice)
       });
-      loadScene();
-    };
-    choicesDiv.appendChild(btn);
+      const data = await res.json();
+      renderScene(data);
+    }));
   }
 
   // Show inventory summary
@@ -161,18 +166,18 @@ function showInventory(inventory, health, maxHealth, playerName) {
   invDiv.innerHTML += inventory.map(i => i.name).join(", ");
 }
 
-async function showBackpack() {
-  const res = await fetch('/scene');
-  const data = await res.json();
+async function showBackpack(data) {
+  if (!data) throw new Error("showBackpack requires data to be passed in.");
   const invDiv = document.getElementById('choices');
+  // Force full clear
+  while (invDiv.firstChild) invDiv.removeChild(invDiv.firstChild);
   invDiv.innerHTML = "<b>Backpack:</b><br>";
 
   // Show feedback message if present
-  if (data.lastMessage) {
+  if (data.lastMessage && data.lastMessage.trim() !== "") {
     const msg = document.createElement('div');
     msg.innerText = data.lastMessage;
-    msg.style.margin = "1em 0";
-    msg.style.color = "#9cf";
+    msg.className = "feedback-message";
     invDiv.appendChild(msg);
   }
 
@@ -183,33 +188,33 @@ async function showBackpack() {
       if (idx === data.equippedWeaponIndex) {
         invDiv.innerHTML += `<b>${item.name} (equipped)</b> - ${item.description}<br>`;
       } else if (item.type === "Weapon") {
-        // Show equip button for weapons
-        const btn = document.createElement('button');
-        btn.innerText = `Equip ${item.name}`;
-        btn.onclick = async () => {
-          await fetch('/equip-weapon', {
+        invDiv.appendChild(createActionButton(`Equip ${item.name}`, async () => {
+          const res = await fetch('/equip-weapon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'id=' + encodeURIComponent(item.id)
           });
-          showBackpack();
-        };
-        invDiv.appendChild(btn);
+          const data = await res.json();
+          console.log("Inventory after action:", data.inventory.map(i => ({name: i.name, id: i.id})));
+          showBackpack(data);
+        }));
         invDiv.appendChild(document.createTextNode(` - ${item.description}`));
         invDiv.appendChild(document.createElement('br'));
       } else if (item.type === "Consumable" || item.name === "Device") {
-        // Show use button for consumables and device
-        const btn = document.createElement('button');
-        btn.innerText = item.name === "Device" ? `Use Device` : `Use ${item.name}`;
-        btn.onclick = async () => {
-          await fetch('/use-item', {
+        invDiv.appendChild(createActionButton(item.name === "Device" ? `Use Device` : `Use ${item.name}`, async () => {
+          const res = await fetch('/use-item', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'id=' + encodeURIComponent(item.id)
           });
-          showBackpack();
-        };
-        invDiv.appendChild(btn);
+          const data = await res.json();
+          console.log("Inventory after action:", data.inventory.map(i => ({name: i.name, id: i.id})));
+          if (data.ending) {
+            renderScene(data); // Immediately show ending if set
+          } else {
+            showBackpack(data); // Otherwise, stay in backpack
+          }
+        }));
         invDiv.appendChild(document.createTextNode(` - ${item.description}`));
         invDiv.appendChild(document.createElement('br'));
       } else if (item.name === "Shuttle Parts") {
@@ -219,13 +224,8 @@ async function showBackpack() {
   }
 
   // Add a back button
-  const backBtn = document.createElement('button');
-  backBtn.innerText = "Back";
-  backBtn.onclick = loadScene;
-  invDiv.appendChild(backBtn);
+  invDiv.appendChild(createActionButton("Back", loadScene));
 }
 
 document.getElementById('restart').onclick = startGame;
-
-// Start game on page load
 startGame();

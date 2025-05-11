@@ -12,6 +12,7 @@ public class Player {
     private Weapon equippedWeapon;
     private ArrayList<Item> inventory;
     private Map<String, Effect> activeEffects;
+    private Adventure adventure;
 
     // Player starts with default stats and empty inventory
     public Player() {
@@ -74,9 +75,23 @@ public class Player {
     // Use an item (like a med-stim)
     public String useItem(Item item) {
         if (item instanceof Consumable) {
-            return ((Consumable) item).use(this);
+            Consumable c = (Consumable) item;
+            switch (c.getConsumableType()) {
+                case MED_STIM:
+                    int heal = Math.min(c.getValue(), getMaxHealth() - getHealth());
+                    setHealth(getHealth() + heal);
+                    return "You use a Med-Stim and recover " + heal + " health.";
+                case MYSTERY_SNACK:
+                    setMaxHealth(getMaxHealth() + 10);
+                    return "You eat the Mystery Snack. Your max health increases by 10!";
+                case SPOILED_DRINK:
+                    addEffect("SICK", 1, 99); // 99 = until game ends or cured
+                    return "You drink the Spoiled Drink. You feel sick...";
+                default:
+                    return "You use the " + item.getName() + ".";
+            }
         }
-        return "";
+        return "You can't use that item.";
     }
 
     // Show backpack and let player use or equip an item (console only)
@@ -106,11 +121,19 @@ public class Player {
             String result = useItem(item);
             if (!Adventure.IS_WEB) System.out.println(result);
             inventory.remove(item);
+            relinkEquippedWeapon(); // <-- Add this line
+            showBackpack(scanner); // Stay in backpack
         } else if (item instanceof Weapon) {
             setEquippedWeapon((Weapon) item); // Equip whatever weapon you pick
             if (!Adventure.IS_WEB) System.out.println("You equipped the " + item.getName() + ".");
+            showBackpack(scanner); // Stay in backpack
+        } else if (item.getName().equals("Device") && adventure != null) {
+            adventure.useItemFromInventory(choice - 1);
+            if (!Adventure.IS_WEB) System.out.println(adventure.getLastMessage());
+            showBackpack(scanner); // Stay in backpack
         } else {
             if (!Adventure.IS_WEB) System.out.println("You can't use that item right now.");
+            showBackpack(scanner); // Stay in backpack
         }
     }
 
@@ -122,10 +145,23 @@ public class Player {
     public int getMaxHealth() { return maxHealth; }
     public void setMaxHealth(int maxHealth) { this.maxHealth = maxHealth; }
     public Weapon getEquippedWeapon() { return equippedWeapon; }
-    public void setEquippedWeapon(Weapon weapon) { this.equippedWeapon = weapon; }
+    public void setEquippedWeapon(Weapon weapon) {
+        for (Item item : inventory) {
+            if (item instanceof Weapon && item.getId().equals(weapon.getId())) {
+                this.equippedWeapon = (Weapon) item;
+                System.out.println("Equipped weapon set to: " + item.getName() + " (" + item.getId() + ")");
+                return;
+            }
+        }
+        this.equippedWeapon = null;
+        System.out.println("Equipped weapon set to: null");
+    }
     public void addItem(Item item) { inventory.add(item); }
     public void removeItem(Item item) { inventory.remove(item); }
     public ArrayList<Item> getInventory() { return inventory; }
+    public void setAdventure(Adventure adventure) {
+        this.adventure = adventure;
+    }
 
     // Equip a weapon by index (console only)
     public void equipWeapon(int index) {
@@ -138,6 +174,37 @@ public class Player {
     // Get the index of the equipped weapon in your backpack
     public int getEquippedWeaponIndex() {
         if (equippedWeapon == null) return -1;
-        return inventory.indexOf(equippedWeapon);
+        for (int i = 0; i < inventory.size(); i++) {
+            Item item = inventory.get(i);
+            if (item instanceof Weapon && item.getId().equals(equippedWeapon.getId())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // Relink equipped weapon with inventory
+    public void relinkEquippedWeapon() {
+        if (equippedWeapon == null) return;
+        for (Item item : inventory) {
+            if (item instanceof Weapon && item.getId().equals(equippedWeapon.getId())) {
+                equippedWeapon = (Weapon) item;
+                return;
+            }
+        }
+        // If not found, unequip
+        equippedWeapon = null;
+    }
+
+    // Display inventory and equipped weapon
+    public void displayInventory() {
+        System.out.println("Inventory:");
+        for (int i = 0; i < inventory.size(); i++) {
+            Item item = inventory.get(i);
+            System.out.println(i + ": " + item.getName() + " (" + item.getId() + ")");
+        }
+        if (equippedWeapon != null) {
+            System.out.println("Equipped: " + equippedWeapon.getName() + " (" + equippedWeapon.getId() + ")");
+        }
     }
 }

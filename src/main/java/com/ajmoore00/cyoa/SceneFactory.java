@@ -32,7 +32,16 @@ public class SceneFactory {
             "You find the storage room. It's a mess of toppled crates and scattered tools. " +
             "The floor is covered in a thin layer of white dust tracked in from outside."
         );
-        storage.addChoice("Search for tools", "CryoWake");
+        storage.addChoice("Search for tools", "Storage", (adventure, player) -> {
+            if (!adventure.hasWrench()) {
+                player.addItem(new Weapon("Wrench", "A heavy wrench. Good for fixing... or fighting.", 8));
+                adventure.setGotWrench(true);
+                adventure.getGameState().setCurrentScene("Storage");
+                return "You found a heavy wrench and added it to your backpack.";
+            } else {
+                return "You already took the wrench.";
+            }
+        });
         storage.addChoice("Go back to cryo pod", "CryoWake");
 
         Scene bridge = new Scene(
@@ -48,7 +57,16 @@ public class SceneFactory {
             "The workshop is cramped and smells like burnt circuits. Tools are scattered everywhere, " +
             "and you spot a plasma cutter on a bench."
         );
-        workshop.addChoice("Grab plasma cutter", "Bridge");
+        workshop.addChoice("Grab plasma cutter", "Workshop", (adventure, player) -> {
+            if (!adventure.hasCutter()) {
+                player.addItem(new Weapon("Plasma Cutter", "Cuts metal. Or creatures.", 14));
+                adventure.setGotCutter(true);
+                adventure.getGameState().setCurrentScene("Workshop");
+                return "You grab the plasma cutter and add it to your backpack.";
+            } else {
+                return "You already took the plasma cutter.";
+            }
+        });
         workshop.addChoice("Go back to bridge", "Bridge");
 
         Scene medbay = new Scene(
@@ -56,7 +74,22 @@ public class SceneFactory {
             "and a half-working med-stim dispenser humming in the corner. " +
             "A broken comms panel crackles with static, but you can't make out any voices."
         );
-        medbay.addChoice("Take a med-stim", "Medbay");
+        medbay.addChoice("Take a med-stim", "Medbay", (adventure, player) -> {
+            if (!adventure.isMedUsed()) {
+                player.addItem(new Consumable(
+                    "Med-Stim",
+                    "Heals 50 health.",
+                    Consumable.ConsumableType.MED_STIM,
+                    50,
+                    0
+                ));
+                adventure.setMedUsed(true);
+                adventure.getGameState().setCurrentScene("Medbay");
+                return "You grab a med-stim from the dispenser.";
+            } else {
+                return "You already took the med-stim.";
+            }
+        });
         medbay.addChoice("Continue down the hall", "SpareParts");
         medbay.addChoice("Go back to cryo pod", "CryoWake");
 
@@ -64,7 +97,16 @@ public class SceneFactory {
             "You find a small room labeled 'Spare Parts'. Shelves are knocked over, " +
             "but you spot a box labeled 'Shuttle Parts'."
         );
-        spareParts.addChoice("Grab shuttle parts", "SpareParts");
+        spareParts.addChoice("Grab shuttle parts", "SpareParts", (adventure, player) -> {
+            if (!adventure.hasParts()) {
+                player.addItem(new Item("Shuttle Parts", "Essential for fixing the shuttle.") {});
+                adventure.setGotParts(true);
+                adventure.getGameState().setCurrentScene("SpareParts");
+                return "You grab the shuttle parts.";
+            } else {
+                return "You already took the shuttle parts.";
+            }
+        });
         spareParts.addChoice("Go back to medbay", "Medbay");
 
         Scene crashSite = new Scene(
@@ -91,14 +133,34 @@ public class SceneFactory {
             "Its eyes are black and empty, and in one clawed hand it clutches a device—something you recognize from the ship. " +
             "The ground is littered with scraps of a crew suit. The creature turns, and you know you have to fight or run."
         );
-        largeCreatureEncounter.addChoice("Fight it", "LargeCreatureEncounter");
+        largeCreatureEncounter.addChoice("Fight it", "LargeCreatureEncounter", (adventure, player) -> {
+            if (adventure.isBeastDefeated()) {
+                return "The beast is already dead.";
+            }
+            if (!adventure.isInCombat()) {
+                adventure.startCombat(new Enemy("Massive Pale Beast", 40, 16));
+                return "You charge the beast!";
+            } else {
+                return "You're already fighting!";
+            }
+        });
         largeCreatureEncounter.addChoice("Run back to the ship", "CrashSite");
 
         Scene postCombatLarge = new Scene(
             "You survived the fight. The creature drops the device as it collapses. " +
             "It's clearly from your ship—a powerful explosive, maybe meant for emergencies. Why did the creature have it?"
         );
-        postCombatLarge.addChoice("Take the device and check the mirage structure", "MirageWalk");
+        postCombatLarge.addChoice("Take the device and check the mirage structure", "MirageWalk", (adventure, player) -> {
+            if (!adventure.hasDevice()) {
+                player.addItem(new Item("Device", "A mysterious device. It hums with dangerous energy.") {});
+                adventure.setGotDevice(true);
+                adventure.getGameState().setCurrentScene("MirageWalk");
+                return "You pick up the device dropped by the beast and head toward the mirage.";
+            } else {
+                adventure.getGameState().setCurrentScene("MirageWalk");
+                return "You already picked up the device. You head toward the mirage.";
+            }
+        });
         postCombatLarge.addChoice("Go back to the ship", "CrashSite");
 
         Scene mirageWalk = new Scene(
@@ -128,7 +190,31 @@ public class SceneFactory {
             "You find the escape shuttle, half-buried in dust. It's mostly intact, but the power cell is missing and the hull is scorched. " +
             "Inside, the controls flicker and the air smells like burnt plastic. You might be able to fix it, if you can find the right parts."
         );
-        shuttleBay.addChoice("Try to fix the shuttle", "ShuttleBay");
+        shuttleBay.addChoice("Try to fix the shuttle", "ShuttleBay", (adventure, player) -> {
+            if (adventure.isShuttleFixed()) {
+                adventure.getGameState().setCurrentScene("ShuttleBayFixed");
+                return "The shuttle is already patched together. It looks ugly, but it might just fly.";
+            }
+            if (adventure.hasWrench() && adventure.hasCutter() && adventure.hasParts()) {
+                // Remove Shuttle Parts from inventory
+                Item toRemove = null;
+                for (Item i : player.getInventory()) {
+                    if (i.getName().equals("Shuttle Parts")) {
+                        toRemove = i;
+                        break;
+                    }
+                }
+                if (toRemove != null) {
+                    player.removeItem(toRemove);
+                    player.relinkEquippedWeapon(); // <-- Add this line
+                }
+                adventure.setShuttleFixed(true);
+                adventure.getGameState().setCurrentScene("ShuttleBayFixed");
+                return "You patch the shuttle together. It's ugly, but it might just fly.";
+            } else {
+                return "You don't have all the tools and parts you need to fix the shuttle.";
+            }
+        });
         shuttleBay.addChoice("Go back to the crash site", "CrashSite");
 
         Scene shuttleBayFixed = new Scene(
@@ -162,7 +248,9 @@ public class SceneFactory {
             moonName + ". The universe feels bigger and stranger than you ever imagined."
         );
         Scene endEscape = new Scene(
-            "You escape and warn the others. The moon stays a mystery, at least for now."
+            "You scramble into the battered escape shuttle, patching wires and praying the engine holds. " +
+            "As you break atmosphere, you send a warning to the incoming ships: 'Turn back. Krylos isn't safe.' " +
+            "The mission is scrubbed. You live to engineer another day, but you'll never forget what you saw."
         );
         Scene endSacrifice = new Scene(
             "You activate the device and a blinding white light fills the structure. " +

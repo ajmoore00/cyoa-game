@@ -1,5 +1,6 @@
 package com.ajmoore00.cyoa;
 import java.util.*;
+import java.util.function.BiFunction;
 import com.google.gson.Gson;
 
 public class Adventure {
@@ -32,6 +33,7 @@ public class Adventure {
     // Sets up everything for the game
     public Adventure() {
         player = new Player();
+        player.setAdventure(this);
         gameState = new GameState();
         scenesMap = SceneFactory.createScenes(SHIP, MOON, PLANET, SYSTEM);
         if (!IS_WEB) {
@@ -63,7 +65,7 @@ public class Adventure {
         player.getInventory().clear();
         player.setEquippedWeapon(null);
         gameState.setEnding(null);
-        gameState.setCurrentScene("CryoWake");
+        gameState.setCurrentScene("Intro");
         gameState.setLastChoice("");
         gotWrench = false;
         gotCutter = false;
@@ -71,25 +73,6 @@ public class Adventure {
         gotDevice = false;
         shuttleFixed = false;
         medUsed = false;
-        if (!IS_WEB) {
-            System.out.println("=== Krylos ===");
-            System.out.println(
-                "Year 2342. You were part of a science crew on the " + SHIP +
-                ", heading to " + MOON + ", a moon orbiting the gas giant " +
-                PLANET + " in the " + SYSTEM + " system."
-            );
-            System.out.println(
-                "Your team picked up weird stuff in the scans. The moon seemed to radiate some kind of energy, and command wanted answers."
-            );
-            System.out.print("\nWhat's your name, engineer? ");
-            String playerName = input.nextLine();
-            if (playerName == null || playerName.trim().isEmpty())
-                playerName = "Player";
-            player.setName(playerName);
-            System.out.println(
-                "\nYou remember going into cryo, but now you wake up to chaos..."
-            );
-        }
     }
 
     // Set player name from frontend
@@ -108,41 +91,36 @@ public class Adventure {
         while (gameState.getEnding() == null) {
             showScene();
             getPlayerChoice();
+
+            String prevMessage = lastMessage;
+
             // Sometimes a random event happens, just to keep things interesting
-            if (Math.random() < 0.3 && gameState.getEnding() == null) {
+            String randomEventMsg = "";
+            if (gameState.getEnding() == null && Math.random() < 0.3) {
                 triggerRandomEvent();
+                randomEventMsg = lastMessage;
+                lastMessage = prevMessage; // Restore handler message for printing order
+            }
+
+            // Print all messages (random event first, then handler) after each turn
+            if (!IS_WEB) {
+                if (randomEventMsg != null && !randomEventMsg.isEmpty()) {
+                    System.out.println(randomEventMsg);
+                }
+                if (prevMessage != null && !prevMessage.isEmpty()) {
+                    System.out.println(prevMessage);
+                }
+                lastMessage = "";
             }
         }
         // Print out the ending
         if (!IS_WEB) {
             System.out.println("\n=== Ending: " + gameState.getEnding() + " ===");
-            switch (gameState.getEnding()) {
-                case ESCAPE:
-                    System.out.println(
-                        "You scramble into the battered escape shuttle, patching wires and praying the engine holds. " +
-                        "As you break atmosphere, you send a warning to the incoming ships: 'Turn back. Krylos isn't safe.' " +
-                        "The mission is scrubbed. You live to engineer another day, but you'll never forget what you saw."
-                    );
-                    break;
-                case SACRIFICE:
-                    System.out.println(
-                        "You activate the device and a blinding white light fills the structure. " +
-                        "You feel the ground shake as everything collapses. The secret of Krylos is buried, but so are you."
-                    );
-                    break;
-                case DEATH:
-                    System.out.println(
-                        "Your vision fades as the cold and silence of Krylos closes in. This is where your story ends."
-                    );
-                    break;
-                case STAY:
-                    System.out.println(
-                        "You stay with the aliens, learning their secrets and exploring the mysteries of " +
-                        MOON + ". The universe feels bigger and stranger than you ever imagined."
-                    );
-                    break;
-                default:
-                    System.out.println("The story ends... for now.");
+            Scene endingScene = scenesMap.get("END_" + gameState.getEnding().name());
+            if (endingScene != null) {
+                System.out.println(endingScene.getDescription());
+            } else {
+                System.out.println("The story ends... for now.");
             }
         }
     }
@@ -189,11 +167,19 @@ public class Adventure {
         }
         if (!IS_WEB) {
             int i = 1;
+            boolean hasDeviceItem = false;
+            for (Item item : player.getInventory()) {
+                if (item.getName().equals("Device")) {
+                    hasDeviceItem = true;
+                    break;
+                }
+            }
             for (String choice : scene.getChoices().keySet()) {
                 // Hide device option if you don't have it
                 if (
-                    choice.equals("Use the device to destroy the structure and everything inside")
-                    && !gotDevice
+                    (choice.equals("Use the device to destroy the structure and everything inside")
+                    || choice.equals("Activate the device and destroy everything"))
+                    && !hasDeviceItem
                 ) continue;
                 // Hide shuttle option if you can't leave yet
                 if (
@@ -202,7 +188,9 @@ public class Adventure {
                 ) continue;
                 System.out.println(i++ + ". " + choice);
             }
-            System.out.println(i + ". Open backpack");
+            if (!IS_WEB && !gameState.getCurrentScene().equals("Intro") && !gameState.getCurrentScene().startsWith("END_")) {
+                System.out.println(i + ". Open backpack");
+            }
         }
     }
 
@@ -210,16 +198,29 @@ public class Adventure {
     private void getPlayerChoice() {
         Scene scene = scenesMap.get(gameState.getCurrentScene());
         if (scene == null) return;
+
+        // Special handling for Intro scene (console only)
+        if (!IS_WEB && gameState.getCurrentScene().equals("Intro")) {
+            System.out.print("Enter your name: ");
+            String name = input.nextLine().trim();
+            setPlayerName(name);
+            return;
+        }
+
         List<String> options = new ArrayList<>();
+        boolean hasDeviceItem = false;
+        for (Item i : player.getInventory()) {
+            if (i.getName().equals("Device")) {
+                hasDeviceItem = true;
+                break;
+            }
+        }
         // Only add choices you can actually do
         for (String choice : scene.getChoices().keySet()) {
             if (
-                choice.equals("Use the device to destroy the structure and everything inside")
-                && !gotDevice
-            ) continue;
-            if (
-                choice.equals("Activate the device and destroy everything")
-                && !gotDevice
+                (choice.equals("Use the device to destroy the structure and everything inside")
+                || choice.equals("Activate the device and destroy everything"))
+                && !hasDeviceItem
             ) continue;
             if (
                 choice.equals("Leave for the shuttle")
@@ -228,7 +229,7 @@ public class Adventure {
             options.add(choice);
         }
         int choiceNum = -1;
-        if (!IS_WEB) {
+        if (!IS_WEB && !gameState.getCurrentScene().equals("Intro") && !gameState.getCurrentScene().startsWith("END_")) {
             while (choiceNum < 1 || choiceNum > options.size() + 1) {
                 System.out.print("What do you do? (Enter number): ");
                 try {
@@ -237,38 +238,77 @@ public class Adventure {
                     choiceNum = -1;
                 }
             }
-        }
-        // Backpack option
-        if (!IS_WEB) {
             if (choiceNum == options.size() + 1) {
                 player.showBackpack(input);
+                // If using an item triggered an ending, stop immediately
+                if (gameState.getEnding() != null) return;
+                showScene();
                 getPlayerChoice();
                 return;
+            }
+        } else {
+            while (choiceNum < 1 || choiceNum > options.size()) {
+                System.out.print("What do you do? (Enter number): ");
+                try {
+                    choiceNum = Integer.parseInt(input.nextLine());
+                } catch (NumberFormatException e) {
+                    choiceNum = -1;
+                }
             }
         }
         String choice = options.get(choiceNum - 1);
         gameState.setLastChoice(choice);
-        String nextScene = scene.getChoices().get(choice);
+
+        BiFunction<Adventure, Player, String> handler = scene.getHandler(choice);
+        if (handler != null) {
+            lastMessage = handler.apply(this, player);
+            // If combat was started, handle it in console mode
+            if (!IS_WEB && inCombat && currentEnemy != null) {
+                boolean survived = Combat.handleCombat(player, currentEnemy);
+                inCombat = false;
+                currentEnemy = null;
+                if (!survived) {
+                    gameState.setEnding(GameState.Ending.DEATH);
+                }
+                // After combat, move to post-combat scene if needed
+                if (gameState.getCurrentScene().equals("LargeCreatureEncounter") && survived) {
+                    gameState.setCurrentScene("PostCombatLarge");
+                }
+                return;
+            }
+            // Handler may change the scene, so update nextScene
+            String newScene = gameState.getCurrentScene();
+            if (!newScene.equals(scene.getChoices().get(choice))) {
+                // Handler already changed the scene, so return
+                return;
+            }
+        }
 
         // Handle any special logic for this choice
         if (handleChoiceLogic(gameState.getCurrentScene(), choice, true)) {
             return;
         }
 
+        String nextScene = scene.getChoices().get(choice);
+
         // Handle endings
         if (nextScene != null && nextScene.startsWith("END_")) {
             switch (nextScene) {
                 case "END_ESCAPE":
                     gameState.setEnding(GameState.Ending.ESCAPE);
+                    gameState.setCurrentScene("END_ESCAPE");
                     break;
                 case "END_DEATH":
                     gameState.setEnding(GameState.Ending.DEATH);
+                    gameState.setCurrentScene("END_DEATH");
                     break;
                 case "END_SACRIFICE":
                     gameState.setEnding(GameState.Ending.SACRIFICE);
+                    gameState.setCurrentScene("END_SACRIFICE");
                     break;
                 case "END_STAY":
                     gameState.setEnding(GameState.Ending.STAY);
+                    gameState.setCurrentScene("END_STAY");
                     break;
             }
         } else if (nextScene != null) {
@@ -286,6 +326,15 @@ public class Adventure {
             }
         }
         Scene scene = scenesMap.get(gameState.getCurrentScene());
+        if (scene != null) {
+            BiFunction<Adventure, Player, String> handler = scene.getHandler(choiceText);
+            if (handler != null) {
+                lastMessage = handler.apply(this, player);
+                // Handler may have changed the scene or set a message.
+                // Return immediately so the frontend can show the message and new scene.
+                return;
+            }
+        }
         if (scene == null) return;
         String current = gameState.getCurrentScene();
         String nextScene = scene.getChoices().get(choiceText);
@@ -300,25 +349,36 @@ public class Adventure {
             switch (nextScene) {
                 case "END_ESCAPE":
                     gameState.setEnding(GameState.Ending.ESCAPE);
+                    gameState.setCurrentScene("END_ESCAPE");
                     break;
                 case "END_DEATH":
                     gameState.setEnding(GameState.Ending.DEATH);
+                    gameState.setCurrentScene("END_DEATH");
                     break;
                 case "END_SACRIFICE":
                     gameState.setEnding(GameState.Ending.SACRIFICE);
+                    gameState.setCurrentScene("END_SACRIFICE");
                     break;
                 case "END_STAY":
                     gameState.setEnding(GameState.Ending.STAY);
+                    gameState.setCurrentScene("END_STAY");
                     break;
             }
         } else if (nextScene != null) {
             gameState.setCurrentScene(nextScene);
         }
 
-        // Maybe trigger a random event
+        // Maybe trigger a random event and append message
         if (gameState.getEnding() == null) {
             if (Math.random() < 0.3) {
+                String prevMessage = lastMessage;
                 triggerRandomEvent();
+                if (prevMessage != null && !prevMessage.isEmpty() && lastMessage != null && !lastMessage.isEmpty()) {
+                    lastMessage = prevMessage + " " + lastMessage;
+                } else if (prevMessage != null && !prevMessage.isEmpty()) {
+                    lastMessage = prevMessage;
+                }
+                // else, just use lastMessage as set by triggerRandomEvent
             }
         }
     }
@@ -328,116 +388,15 @@ public class Adventure {
      * Returns true if the choice was handled (special logic), false if normal scene transition.
      */
     private boolean handleChoiceLogic(String current, String choice, boolean isConsole) {
-        // Storage room: grab the wrench if you haven't already
-        if (current.equals("Storage") && choice.equals("Search for tools")) {
-            if (!gotWrench) {
-                player.addItem(new Weapon("Wrench", "A heavy wrench. Not fancy, but it'll smash stuff.", 8));
-                gotWrench = true;
-                lastMessage = "You grab a wrench. Feels solid in your hand.";
-            } else {
-                lastMessage = "You already grabbed the wrench earlier.";
-            }
+        // Always redirect to ShuttleBayFixed if shuttle is fixed
+        if ((choice.equals("Go to the escape shuttle") || choice.equals("Go back to the shuttle") || choice.equals("Go back to the escape shuttle") || choice.equals("Leave for the shuttle"))
+            && shuttleFixed) {
+            gameState.setCurrentScene("ShuttleBayFixed");
+            lastMessage = "The shuttle is already patched together. It looks ugly, but it might just fly.";
             return true;
         }
-
-        // Workshop: grab the plasma cutter if you haven't already
-        if (current.equals("Workshop") && choice.equals("Grab plasma cutter")) {
-            if (!gotCutter) {
-                player.addItem(new Weapon("Plasma Cutter", "Cuts through metal... or whatever else.", 16));
-                gotCutter = true;
-                lastMessage = "You snag the plasma cutter. This thing could come in handy.";
-            } else {
-                lastMessage = "You already took the plasma cutter.";
-            }
-            return true;
-        }
-
-        // Medbay: grab a med-stim if you haven't already
-        if (current.equals("Medbay") && choice.equals("Take a med-stim")) {
-            if (!medUsed) {
-                player.addItem(new Consumable(
-                    "Med-Stim",
-                    "Heals 50 health.",
-                    Consumable.ConsumableType.MED_STIM,
-                    50,
-                    0
-                ));
-                medUsed = true;
-                lastMessage = "You grab a med-stim from the dispenser.";
-            } else {
-                lastMessage = "You already took the med-stim.";
-            }
-            return true;
-        }
-
-        // Spare Parts: grab shuttle parts if you haven't already
-        if (current.equals("SpareParts") && choice.equals("Grab shuttle parts")) {
-            if (!gotParts) {
-                player.addItem(new Item("Shuttle Parts", "Essential parts to repair the shuttle.") {});
-                gotParts = true;
-                lastMessage = "You grab the shuttle parts. Hope they're all here.";
-            } else {
-                lastMessage = "You already took the shuttle parts.";
-            }
-            return true;
-        }
-
-        // Shuttle: try to fix it if you have all the stuff
-        if (current.equals("ShuttleBay") && choice.equals("Try to fix the shuttle")) {
-            if (shuttleFixed) {
-                lastMessage = "You already patched up the shuttle.";
-            } else if (gotWrench && gotCutter && gotParts) {
-                shuttleFixed = true;
-                gameState.setCurrentScene("ShuttleBayFixed");
-                lastMessage = "You patch the shuttle together. It's ugly, but it might just fly.";
-            } else {
-                lastMessage = "You don't have everything you need to fix the shuttle.";
-            }
-            return true;
-        }
-
-        // Escape on the shuttle
-        if (current.equals("ShuttleBayFixed") && choice.equals("Escape on the shuttle")) {
-            gameState.setEnding(GameState.Ending.ESCAPE);
-            if (!isConsole)
-                lastMessage = "You escape on the shuttle!";
-            return true;
-        }
-
-        // Beast fight logic
-        if (current.equals("LargeCreatureEncounter")) {
-            if (beastDefeated) {
-                lastMessage = "The beast is already down. Nothing left to do here.";
-                return true;
-            }
-            if (choice.equals("Fight it")) {
-                startCombat(new Enemy("Massive Pale Beast", 40, 14));
-                return true;
-            }
-            if (choice.equals("Run back to the ship")) {
-                lastMessage = "You bolt back to the ship, heart pounding.";
-                gameState.setCurrentScene("CrashSite");
-                return true;
-            }
-        }
-
-        // Device logic (for future expansion)
-        if (current.equals("DeviceRoom") && choice.equals("Take the device")) {
-            boolean hasDevice = false;
-            for (Item i : player.getInventory()) {
-                if (i.getName().equals("Device")) hasDevice = true;
-            }
-            if (!hasDevice) {
-                player.addItem(new Item("Device", "A weird device. Looks dangerous.") {});
-                gotDevice = true;
-                lastMessage = "You take the device. It hums quietly in your hand.";
-            } else {
-                lastMessage = "You already have the device.";
-            }
-            return true;
-        }
-
-        return false; // Not a special case, just move to the next scene
+        // All other scene-specific logic is now handled by SceneFactory handlers.
+        return false;
     }
 
     // Handles random events (like finding snacks or running into critters)
@@ -445,8 +404,7 @@ public class Adventure {
         RandomEvent event = RandomEvent.generateEvent();
         String type = event.getEventType();
         String desc = event.getDescription();
-        if (!IS_WEB) System.out.println(desc);
-        lastMessage = desc;
+        lastMessage = desc; // <-- Always set lastMessage
 
         switch (type) {
             case "Mystery Snack":
@@ -461,7 +419,8 @@ public class Adventure {
                         Consumable.ConsumableType.MYSTERY_SNACK,
                         0,
                         0
-                    ));
+                     ));
+                    lastMessage += " You found a Mystery Snack!";
                 }
                 break;
             case "Spoiled Drink":
@@ -476,7 +435,8 @@ public class Adventure {
                         Consumable.ConsumableType.SPOILED_DRINK,
                         0,
                         0
-                    ));
+                     ));
+                    lastMessage += " You found a Spoiled Drink!";
                 }
                 break;
             case "Med-Stim":
@@ -489,6 +449,7 @@ public class Adventure {
                         0
                     )
                 );
+                lastMessage += " You found a Med-Stim!";
                 break;
             case "Enemy Encounter":
                 Enemy enemy = new Enemy("Moon Critter", 18, 7);
@@ -496,6 +457,7 @@ public class Adventure {
                     Combat.handleCombat(player, enemy);
                 } else {
                     startCombat(enemy);
+                    lastMessage += " A Moon Critter attacks!";
                 }
                 break;
         }
@@ -553,17 +515,12 @@ public class Adventure {
             inCombat = false;
             // If you beat the big beast, you get the device
             if ("Massive Pale Beast".equals(currentEnemy.getName())) {
-                gotDevice = true;
                 beastDefeated = true;
-                boolean hasDevice = false;
-                for (Item i : player.getInventory()) {
-                    if (i.getName().equals("Device")) hasDevice = true;
-                }
-                if (!hasDevice) {
-                    player.addItem(new Item("Device", "A weird device. Looks dangerous.") {});
-                    lastMessage += " The beast drops a strange device. You pick it up.";
-                }
+                gotDevice = false; // Only set true when picked up!
+                gameState.setCurrentScene("PostCombatLarge");
             }
+            currentEnemy = null;
+            return;
         }
     }
 
@@ -573,7 +530,30 @@ public class Adventure {
         Map<String, Object> data = new HashMap<>();
         data.put("scene", gameState.getCurrentScene());
         data.put("description", scene != null ? scene.getDescription() : "Scene not found!");
-        data.put("choices", scene != null ? scene.getChoices().keySet() : new ArrayList<>());
+        // Filter choices for device and shuttle
+        List<String> filteredChoices = new ArrayList<>();
+        boolean hasDeviceItem = false;
+        for (Item i : player.getInventory()) {
+            if (i.getName().equals("Device")) {
+                hasDeviceItem = true;
+                break;
+            }
+        }
+        if (scene != null) {
+            for (String choice : scene.getChoices().keySet()) {
+                if (
+                    (choice.equals("Use the device to destroy the structure and everything inside")
+                    || choice.equals("Activate the device and destroy everything"))
+                    && !hasDeviceItem
+                ) continue;
+                if (
+                    choice.equals("Leave for the shuttle")
+                    && !(shuttleFixed || (gotWrench && gotCutter && gotParts))
+                ) continue;
+                filteredChoices.add(choice);
+            }
+        }
+        data.put("choices", filteredChoices);
         data.put("ending", gameState.getEnding());
         data.put("playerHealth", player.getHealth());
         data.put("playerMaxHealth", player.getMaxHealth());
@@ -590,11 +570,9 @@ public class Adventure {
         data.put("inventory", inv);
         data.put("playerName", player.getName());
         data.put("lastMessage", lastMessage);
+        lastMessage = ""; // <-- Only after putting it in the data map
         data.put("inCombat", inCombat);
-        int equippedWeaponIndex = -1;
-        if (player.getEquippedWeapon() != null) {
-            equippedWeaponIndex = player.getInventory().indexOf(player.getEquippedWeapon());
-        }
+        int equippedWeaponIndex = player.getEquippedWeaponIndex();
         data.put("equippedWeaponIndex", equippedWeaponIndex);
         if (inCombat && currentEnemy != null) {
             Map<String, Object> enemyData = new HashMap<>();
@@ -616,11 +594,34 @@ public class Adventure {
         Item item = player.getInventory().get(index);
         if (item instanceof Consumable) {
             lastMessage = player.useItem(item);
+            System.out.println("Before removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
             player.getInventory().remove(index);
+            System.out.println("After removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
+            player.relinkEquippedWeapon();
         } else if (item.getName().equals("Device")) {
-            lastMessage = "You press the button on the device. There is a blinding flash. You are vaporized. Oops.";
-            gameState.setEnding(GameState.Ending.DEATH);
-            player.getInventory().remove(index);
+            if (gameState.getCurrentScene().equals("AlienChamber") || gameState.getCurrentScene().equals("AlienTalk")) {
+                gameState.setEnding(GameState.Ending.SACRIFICE);
+                lastMessage = "You activate the device. The structure collapses in a blinding flash. The secret is buried, but so are you.";
+            } else {
+                lastMessage = "You press the button on the device. There is a blinding flash. You are vaporized. Oops.";
+                gameState.setEnding(GameState.Ending.DEATH);
+            }
+            System.out.println("Before removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
+            player.getInventory().remove(item);
+            System.out.println("After removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
+            player.relinkEquippedWeapon();
         } else {
             lastMessage = "You can't use that item right now.";
         }
@@ -635,7 +636,7 @@ public class Adventure {
         }
         Item item = player.getInventory().get(index);
         if (item instanceof Weapon) {
-            player.setEquippedWeapon((Weapon) item);
+            player.setEquippedWeapon((Weapon) item); // This will now always use inventory reference
             lastMessage = "You equipped the " + item.getName() + ".";
         } else {
             lastMessage = "That's not a weapon!";
@@ -645,23 +646,20 @@ public class Adventure {
     // Equip a weapon by its unique ID (web)
     public void equipWeaponById(String id) {
         lastMessage = "";
-        Item item = null;
+        Weapon weaponToEquip = null;
         for (Item i : player.getInventory()) {
-            if (i.getId().equals(id)) {
-                item = i;
+            if (i instanceof Weapon && i.getId().equals(id)) {
+                weaponToEquip = (Weapon) i;
                 break;
             }
         }
-        if (item == null) {
+        if (weaponToEquip == null) {
             lastMessage = "Invalid item selection.";
             return;
         }
-        if (item instanceof Weapon) {
-            player.setEquippedWeapon((Weapon) item);
-            lastMessage = "You equipped the " + item.getName() + ".";
-        } else {
-            lastMessage = "That's not a weapon!";
-        }
+        player.setEquippedWeapon(weaponToEquip); // Always use inventory reference
+        System.out.println("Equipping weapon: " + weaponToEquip.getName() + " (" + weaponToEquip.getId() + ")");
+        lastMessage = "You equipped the " + weaponToEquip.getName() + ".";
     }
 
     // Use an item by its unique ID (web)
@@ -680,14 +678,76 @@ public class Adventure {
         }
         if (item instanceof Consumable) {
             lastMessage = player.useItem(item);
+            System.out.println("Before removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
             player.getInventory().remove(item);
+            System.out.println("After removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
+            player.relinkEquippedWeapon();
         } else if (item.getName().equals("Device")) {
-            lastMessage = "You press the button on the device. There is a blinding flash. You are vaporized. Oops.";
-            gameState.setEnding(GameState.Ending.DEATH);
+            if (gameState.getCurrentScene().equals("AlienChamber") || gameState.getCurrentScene().equals("AlienTalk")) {
+                gameState.setEnding(GameState.Ending.SACRIFICE);
+                lastMessage = "You activate the device. The structure collapses in a blinding flash. The secret is buried, but so are you.";
+            } else {
+                lastMessage = "You press the button on the device. There is a blinding flash. You are vaporized. Oops.";
+                gameState.setEnding(GameState.Ending.DEATH);
+            }
+            System.out.println("Before removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
             player.getInventory().remove(item);
+            System.out.println("After removal:");
+            for (Item i : player.getInventory()) {
+                System.out.println(i.getName() + " (" + i.getId() + ")");
+            }
+            player.relinkEquippedWeapon();
         } else {
             lastMessage = "You can't use that item right now.";
         }
+    }
+
+    // Getter and setter for medUsed (for SceneFactory handlers)
+    public boolean isMedUsed() {
+        return medUsed;
+    }
+    public void setMedUsed(boolean used) {
+        this.medUsed = used;
+    }
+
+    // Getters and setters for modular scene access
+    public boolean isInCombat() { return inCombat; }
+    public void setInCombat(boolean inCombat) { this.inCombat = inCombat; }
+
+    public boolean hasWrench() { return gotWrench; }
+    public void setGotWrench(boolean gotWrench) { this.gotWrench = gotWrench; }
+
+    public boolean hasCutter() { return gotCutter; }
+    public void setGotCutter(boolean gotCutter) { this.gotCutter = gotCutter; }
+
+    public boolean hasParts() { return gotParts; }
+    public void setGotParts(boolean gotParts) { this.gotParts = gotParts; }
+
+    public boolean hasDevice() { return gotDevice; }
+    public void setGotDevice(boolean gotDevice) { this.gotDevice = gotDevice; }
+
+    public boolean isShuttleFixed() { return shuttleFixed; }
+    public void setShuttleFixed(boolean shuttleFixed) { this.shuttleFixed = shuttleFixed; }
+
+    public boolean isBeastDefeated() {
+        return beastDefeated;
+    }
+
+    public GameState getGameState() {
+        return gameState;
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
     }
 
     // Run the console game if this is the main class being executed
