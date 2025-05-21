@@ -4,18 +4,18 @@ FROM eclipse-temurin:21-jdk
 # Set working directory
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml first for better build caching
-COPY .mvn .mvn
-COPY mvnw pom.xml ./
+# Install Maven
+RUN apt-get update && apt-get install -y maven
 
-# Download dependencies (will cache unless pom.xml changes)
-RUN ./mvnw dependency:go-offline
+# Copy pom.xml and download dependencies
+COPY pom.xml ./
+RUN mvn dependency:go-offline
 
 # Copy the rest of the source code
 COPY src ./src
 
 # Build the application (skip tests for faster build)
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Expose the port Spark uses
 EXPOSE 4567
